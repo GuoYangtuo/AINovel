@@ -118,9 +118,9 @@ class NovelService {
 人物：${JSON.stringify(人物s)}
 我会给出选择并让你续写。主人公的选择会严重影响他的人生轨迹和整个故事的发展，甚至整个故事的结局和世界的走向都会因为主人公选择的不同而改变，保持一定的叙事节奏，不要提前透露所有世界观设定和人物信息，而是随着故事发展才逐渐揭露信息，选择不同，揭露信息的顺序和程度也不同，故事的发展方向也不同，给出选项即可，无需给出每个选项可能的后续发展
 你的输出格式：
-小说正文
-["选项1","选项2",...]
-不要输出格式外的任何无关内容`;
+{小说正文内容}
+["{选项1}","{选项2}","{选项3}"]
+用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
 
     try {
       const response = await this.client.chat.completions.create({
@@ -131,6 +131,7 @@ class NovelService {
         ],
         stream: false
       });
+      console.log(response.choices[0].message.content);
       
       return response.choices[0].message.content;
     } catch (error) {
@@ -151,9 +152,9 @@ class NovelService {
 
 主人公的选择会严重影响他的人生轨迹和整个故事的发展，甚至整个故事的结局和世界的走向都会因为主人公选择的不同而改变，保持一定的叙事节奏，不要提前透露所有世界观设定和人物信息，而是随着故事发展才逐渐揭露信息，选择不同，揭露信息的顺序和程度也不同，故事的发展方向也不同，给出选项即可，无需给出每个选项可能的后续发展
 你的输出格式：
-小说正文
-["选项1","选项2",...]
-不要输出格式外的任何无关内容`;
+{小说正文内容}
+["{选项1}","{选项2}","{选项3}"]
+用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
 
     try {
       const response = await this.client.chat.completions.create({
@@ -165,6 +166,8 @@ class NovelService {
         stream: false
       });
       
+      console.log(response.choices[0].message.content);
+
       return response.choices[0].message.content;
     } catch (error) {
       console.error('继续故事失败:', error);
@@ -194,6 +197,7 @@ class NovelService {
   // 添加投票
   addVote(userId, choice) {
     if (!this.novelState.isVoting) {
+      console.log('当前不在投票阶段s');
       return { success: false, message: '当前不在投票阶段' };
     }
 
@@ -220,7 +224,7 @@ class NovelService {
 
   // 开始投票计时器
   startVotingTimer() {
-    const VOTING_DURATION = 5 * 60 * 1000; // 5分钟
+    const VOTING_DURATION = 1 * 60 * 1000; // 1分钟
     this.novelState.votingEndTime = Date.now() + VOTING_DURATION;
 
     if (this.votingTimer) {
@@ -268,6 +272,7 @@ class NovelService {
           endTime: this.novelState.votingEndTime
         });
       }
+      this.novelState.isVoting = true;
       return;
     }
 
@@ -282,7 +287,7 @@ class NovelService {
       const processed = this.处理回答(nextStory);
 
       // 更新状态
-      this.novelState.currentStory = processed.story;
+      this.novelState.currentStory += processed.story;
       this.novelState.choices = processed.choices;
       this.novelState.votes = {};
       this.novelState.userVotes = {};

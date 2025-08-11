@@ -22,6 +22,7 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled }) => {
 
   const handleVote = (choice) => {
     if (!isVoting) {
+      console.log(isVoting);
       toast.error('当前不在投票阶段');
       return;
     }
@@ -80,7 +81,7 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled }) => {
         {!isVoting && (
           <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(255, 193, 7, 0.1)' }}>
             <Typography variant="body2" color="warning.main" textAlign="center">
-              投票已结束，正在生成下一段故事...
+              故事生成中，请稍等片刻...
             </Typography>
           </Paper>
         )}

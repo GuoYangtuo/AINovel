@@ -150,7 +150,7 @@ const Novel = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <AccessTime sx={{ mr: 1 }} />
                   <Typography variant="h6">
-                    投票倒计时
+                    投票倒计时（无投票自动延长一分钟）
                   </Typography>
                 </Box>
                 <Typography variant="h3" color="primary" sx={{ textAlign: 'center', mb: 1 }}>
