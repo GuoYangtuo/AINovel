@@ -17,7 +17,7 @@ import {
 import { useSocket } from '../contexts/SocketContext';
 import toast from 'react-hot-toast';
 
-const VotingPanel = ({ choices, votes, userVote, isVoting, disabled }) => {
+const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaining, formatTime, totalVotes }) => {
   const { vote } = useSocket();
 
   const handleVote = (choice) => {
@@ -67,15 +67,31 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled }) => {
           <Typography variant="h6" component="h2">
             投票选择
           </Typography>
-          {!isVoting && (
-            <Chip
-              icon={<Timer />}
-              label="等待中"
-              color="warning"
-              size="small"
-              sx={{ ml: 'auto' }}
-            />
-          )}
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isVoting && formatTime && (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center',
+                minWidth: '80px'
+              }}>
+                <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                  {formatTime(timeRemaining || 0)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  {totalVotes || 0} 票
+                </Typography>
+              </Box>
+            )}
+            {!isVoting && (
+              <Chip
+                icon={<Timer />}
+                label="等待中"
+                color="warning"
+                size="small"
+              />
+            )}
+          </Box>
         </Box>
 
         {!isVoting && (
@@ -217,6 +233,16 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled }) => {
             sx={{ display: 'block', textAlign: 'center', mt: 2 }}
           >
             故事将根据得票最多的选项继续发展
+          </Typography>
+        )}
+
+        {isVoting && (
+          <Typography 
+            variant="caption" 
+            color="text.secondary" 
+            sx={{ display: 'block', textAlign: 'center', mt: 2 }}
+          >
+            无投票自动延长一分钟
           </Typography>
         )}
       </CardContent>

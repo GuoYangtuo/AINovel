@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
@@ -17,6 +17,8 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [novelState, setNovelState] = useState(null);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const { token, user } = useAuth();
 
   useEffect(() => {
@@ -51,6 +53,19 @@ export const SocketProvider = ({ children }) => {
         setNovelState(state);
       });
 
+      newSocket.on('story_generating', (data) => {
+        console.log('AI生成中:', data);
+        setNovelState(prev => ({
+          ...prev,
+          isVoting: false,
+          isGenerating: true
+        }));
+        toast(data.message, {
+          icon: '🤖',
+          duration: 5000
+        });
+      });
+
       newSocket.on('story_updated', (data) => {
         console.log('故事更新:', data);
         setNovelState(prev => ({
@@ -59,7 +74,9 @@ export const SocketProvider = ({ children }) => {
           choices: data.choices,
           votes: data.votes,
           userVotes: {},
-          isVoting: true
+          isVoting: true,
+          isGenerating: false,
+          storyHistory: data.storyHistory || prev.storyHistory
         }));
         toast.success(`故事继续！选择了: ${data.winningChoice}`);
       });
@@ -89,7 +106,9 @@ export const SocketProvider = ({ children }) => {
           ...prev,
           votingEndTime: data.endTime
         }));
-        toast.info(data.message);
+        toast(data.message, {
+          icon: 'ℹ️'
+        });
       });
 
       newSocket.on('vote_error', (data) => {
@@ -97,6 +116,20 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('story_error', (data) => {
+        toast.error(data.message);
+      });
+
+      // 房间相关事件
+      newSocket.on('join_room_success', (data) => {
+        console.log('成功加入房间:', data);
+        setCurrentRoomId(data.roomId);
+        setIsJoiningRoom(false);
+        toast.success(`已加入小说: ${data.title}`);
+      });
+
+      newSocket.on('join_room_error', (data) => {
+        console.error('加入房间失败:', data);
+        setIsJoiningRoom(false);
         toast.error(data.message);
       });
 
@@ -111,20 +144,33 @@ export const SocketProvider = ({ children }) => {
         setSocket(null);
         setConnected(false);
         setNovelState(null);
+        setCurrentRoomId(null);
       }
     }
   }, [token, user]);
 
-  const vote = (choice) => {
+  const joinRoom = useCallback((roomId) => {
+    if (socket && connected) {
+      console.log('请求加入房间:', roomId);
+      setIsJoiningRoom(true);
+      setNovelState(null); // 清空之前的状态
+      socket.emit('join_room', { roomId });
+    }
+  }, [socket, connected]);
+
+  const vote = useCallback((choice) => {
     if (socket && connected) {
       socket.emit('vote', { choice });
     }
-  };
+  }, [socket, connected]);
 
   const value = {
     socket,
     connected,
     novelState,
+    currentRoomId,
+    isJoiningRoom,
+    joinRoom,
     vote
   };
 

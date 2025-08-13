@@ -7,6 +7,9 @@ import { Toaster } from 'react-hot-toast';
 import Login from './components/Login';
 import Register from './components/Register';
 import Novel from './components/Novel';
+import HomePage from './components/HomePage';
+import CreateRoom from './components/CreateRoom';
+import UserSettings from './components/UserSettings';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
@@ -31,7 +34,6 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          backdropFilter: 'blur(10px)',
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
         },
@@ -52,10 +54,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/novel" />} />
-      <Route path="/register" element={!user ? <Register /> : <Navigate to="/novel" />} />
-      <Route path="/novel" element={user ? <Novel /> : <Navigate to="/login" />} />
-      <Route path="/" element={<Navigate to={user ? "/novel" : "/login"} />} />
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+      <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+      <Route path="/novel/:roomId" element={user ? <Novel /> : <Navigate to="/login" />} />
+      <Route path="/create-room" element={user ? <CreateRoom /> : <Navigate to="/login" />} />
+      <Route path="/settings" element={user ? <UserSettings /> : <Navigate to="/login" />} />
+      <Route path="/" element={user ? <HomePage /> : <Navigate to="/login" />} />
     </Routes>
   );
 }

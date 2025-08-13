@@ -3,7 +3,16 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
-const { initializeNovel, getNovelState } = require('./services/novelService');
+const templateRoutes = require('./routes/templates');
+const { 
+  initializeNovel, 
+  getNovelState, 
+  addVote, 
+  getRoom,
+  joinRoom,
+  leaveRoom,
+  getAllRoomsInfo 
+} = require('./services/novelService');
 const { authenticateSocket } = require('./middleware/socketAuth');
 
 const app = express();
@@ -21,26 +30,68 @@ app.use(express.json());
 
 // 路由
 app.use('/api/auth', authRoutes);
+app.use('/api/templates', templateRoutes);
+
+// 获取所有活跃小说列表的API
+app.get('/api/novels', (req, res) => {
+  try {
+    const novels = getAllRoomsInfo();
+    res.json({ success: true, novels });
+  } catch (error) {
+    console.error('获取小说列表失败:', error);
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
 
 // Socket.IO 连接处理
 io.use(authenticateSocket);
 io.on('connection', (socket) => {
   console.log('用户连接:', socket.userId);
+  let currentRoomId = null;
   
-  // 发送当前小说状态
-  socket.emit('novel_state', getNovelState());
+  // 用户加入小说房间
+  socket.on('join_room', (data) => {
+    const { roomId } = data;
+    const userId = socket.userId;
+    
+    console.log(`用户 ${userId} 请求加入房间 ${roomId}`);
+    // 离开之前的房间
+    if (currentRoomId) {
+      socket.leave(currentRoomId);
+      leaveRoom(userId, currentRoomId);
+      console.log(`用户 ${userId} 离开房间 ${currentRoomId}`);
+    }
+    
+    // 加入新房间
+    const room = joinRoom(userId, roomId);
+    if (room) {
+      socket.join(roomId);
+      currentRoomId = roomId;
+      console.log(`用户 ${userId} 成功加入房间 ${roomId}`);
+      
+      // 发送房间的小说状态
+      socket.emit('novel_state', room.getNovelState());
+      socket.emit('join_room_success', { roomId, title: room.title });
+    } else {
+      socket.emit('join_room_error', { message: '房间不存在' });
+    }
+  });
   
   // 处理投票
   socket.on('vote', (data) => {
     const { choice } = data;
     const userId = socket.userId;
     
-    const novelService = require('./services/novelService');
-    const result = novelService.addVote(userId, choice);
+    if (!currentRoomId) {
+      socket.emit('vote_error', { message: '请先加入房间' });
+      return;
+    }
+    
+    const result = addVote(userId, choice, currentRoomId);
     
     if (result.success) {
-      // 广播投票更新
-      io.emit('vote_update', {
+      // 向房间内所有用户广播投票更新
+      io.to(currentRoomId).emit('vote_update', {
         votes: result.votes,
         userVote: { [userId]: choice }
       });
@@ -51,6 +102,10 @@ io.on('connection', (socket) => {
   
   socket.on('disconnect', () => {
     console.log('用户断开连接:', socket.userId);
+    // 用户断开连接时离开房间
+    if (currentRoomId) {
+      leaveRoom(socket.userId, currentRoomId);
+    }
   });
 });
 
