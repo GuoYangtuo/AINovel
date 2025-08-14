@@ -13,24 +13,41 @@ import {
   TextField,
   Paper,
   Avatar,
-  Grid
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip
 } from '@mui/material';
 import {
   ArrowBack,
   Person,
-  Save
+  Save,
+  Palette
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, themeOptions } from '../contexts/ThemeContext';
 import toast from 'react-hot-toast';
 
 const UserSettings = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { currentTheme, changeTheme } = useTheme();
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
     username: user?.username || '',
-    email: user?.email || ''
+    email: user?.email || '',
+    theme: user?.theme || currentTheme
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // 同步当前主题到设置中
+  React.useEffect(() => {
+    setSettings(prev => ({
+      ...prev,
+      theme: user?.theme || currentTheme
+    }));
+  }, [user?.theme, currentTheme]);
 
   const handleSettingsChange = (field, value) => {
     setSettings(prev => ({
@@ -39,12 +56,40 @@ const UserSettings = () => {
     }));
   };
 
+  const handleThemeChange = (themeName) => {
+    setSettings(prev => ({ ...prev, theme: themeName }));
+    changeTheme(themeName);
+  };
+
   const handleSaveSettings = async () => {
     setIsLoading(true);
     try {
-      // 这里可以添加保存设置的API调用
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟API调用
-      toast.success('设置保存成功！');
+      // 保存主题到后端
+      const response = await fetch('/api/auth/update-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: settings.username,
+          email: settings.email,
+          theme: settings.theme
+        })
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        // 更新用户信息
+        updateUser({
+          username: settings.username,
+          email: settings.email,
+          theme: settings.theme
+        });
+        toast.success('设置保存成功！');
+      } else {
+        throw new Error('保存失败');
+      }
     } catch (error) {
       toast.error('保存设置失败，请重试');
     } finally {
@@ -166,6 +211,81 @@ const UserSettings = () => {
                   >
                     {isLoading ? '保存中...' : '保存设置'}
                   </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 主题设置 */}
+          <Grid item xs={12}>
+            <Card
+              sx={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+              }}
+            >
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={3}>
+                  <Palette sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6" component="h2">
+                    主题配色
+                  </Typography>
+                </Box>
+
+                <Box mb={3}>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>选择主题</InputLabel>
+                    <Select
+                      value={settings.theme}
+                      onChange={(e) => handleThemeChange(e.target.value)}
+                      label="选择主题"
+                    >
+                      {Object.entries(themeOptions).map(([key, theme]) => (
+                        <MenuItem key={key} value={key}>
+                          <Box display="flex" alignItems="center" width="100%">
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                background: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`,
+                                mr: 2,
+                                border: '1px solid rgba(255,255,255,0.3)'
+                              }}
+                            />
+                            {theme.name}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    预览当前主题效果：
+                  </Typography>
+                  
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {Object.entries(themeOptions).map(([key, theme]) => (
+                      <Chip
+                        key={key}
+                        label={theme.name}
+                        onClick={() => handleThemeChange(key)}
+                        variant={settings.theme === key ? "filled" : "outlined"}
+                        sx={{
+                          background: settings.theme === key 
+                            ? `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
+                            : 'transparent',
+                          color: settings.theme === key ? 'white' : 'inherit',
+                          borderColor: `${theme.primary}50`,
+                          '&:hover': {
+                            background: `linear-gradient(45deg, ${theme.primary}80, ${theme.secondary}80)`,
+                            color: 'white'
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

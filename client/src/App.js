@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster } from 'react-hot-toast';
 
@@ -12,42 +11,9 @@ import CreateRoom from './components/CreateRoom';
 import UserSettings from './components/UserSettings';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { CustomThemeProvider } from './contexts/ThemeContext';
 
-const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#667eea',
-    },
-    secondary: {
-      main: '#764ba2',
-    },
-    background: {
-      default: 'transparent',
-      paper: 'rgba(255, 255, 255, 0.1)',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", "Microsoft YaHei", sans-serif',
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: '25px',
-        },
-      },
-    },
-  },
-});
+// 移除了静态主题定义，现在使用动态主题系统
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -66,12 +32,12 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
+    <AuthProvider>
+      <CustomThemeProvider>
+        <CssBaseline />
         <SocketProvider>
           <Router>
-            <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <div style={{ minHeight: '100vh' }}>
               <AppRoutes />
               <Toaster 
                 position="top-right"
@@ -88,8 +54,8 @@ function App() {
             </div>
           </Router>
         </SocketProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </CustomThemeProvider>
+    </AuthProvider>
   );
 }
 
