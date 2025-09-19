@@ -11,7 +11,9 @@ const {
   getRoom,
   joinRoom,
   leaveRoom,
-  getAllRoomsInfo 
+  getAllRoomsInfo,
+  addDiscussionMessage,
+  getDiscussionMessages
 } = require('./services/novelService');
 const { authenticateSocket } = require('./middleware/socketAuth');
 
@@ -97,6 +99,27 @@ io.on('connection', (socket) => {
       });
     } else {
       socket.emit('vote_error', { message: result.message });
+    }
+  });
+  
+  // 处理讨论区消息
+  socket.on('discussion_message', (data) => {
+    const { message } = data;
+    const userId = socket.userId;
+    const username = socket.username || '匿名用户';
+    
+    if (!currentRoomId) {
+      socket.emit('discussion_error', { message: '请先加入房间' });
+      return;
+    }
+    
+    const result = addDiscussionMessage(userId, username, message, currentRoomId);
+    
+    if (result.success) {
+      // 向房间内所有用户广播新消息
+      io.to(currentRoomId).emit('discussion_message', result.message);
+    } else {
+      socket.emit('discussion_error', { message: result.message });
     }
   });
   

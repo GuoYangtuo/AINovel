@@ -90,6 +90,23 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
+  const saveUserSettings = async (settings) => {
+    try {
+      const response = await axios.put('/api/auth/update-settings', settings);
+      
+      if (response.data && response.data.user) {
+        // 更新用户信息
+        updateUser(response.data.user);
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      const message = error.response?.data?.message || '保存设置失败';
+      return { success: false, message };
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -106,6 +123,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    saveUserSettings,
     loading
   };
 

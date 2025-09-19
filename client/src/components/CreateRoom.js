@@ -352,7 +352,11 @@ const CreateRoom = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 3, pt: 10 }}>
+      <Container maxWidth="lg" sx={{ 
+      py: 3, 
+      pt: 10, 
+      px: { xs: 1, sm: 2, md: 3 } 
+    }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}

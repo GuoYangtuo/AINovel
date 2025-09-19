@@ -206,7 +206,11 @@ const Novel = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ py: 3, pt: 10 }}>
+      <Container maxWidth="md" sx={{ 
+        py: 3, 
+        pt: 10, 
+        px: { xs: 1, sm: 2, md: 3 } 
+      }}>
         {!connected && (
           <Card sx={{ mb: 3, bgcolor: 'rgba(255, 152, 0, 0.1)' }}>
             <CardContent>
@@ -263,6 +267,7 @@ const Novel = () => {
             totalVotes={getTotalVotes()}
             formatTime={formatTime}
             connected={connected}
+            discussion={novelState.discussion || { messages: [], isActive: false }}
           />
         )}
       </Container>

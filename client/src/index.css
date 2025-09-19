@@ -52,3 +52,87 @@ code {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--theme-secondary);
 }
+
+/* 移动端响应式样式 */
+@media (max-width: 768px) {
+  /* 全局移动端优化 */
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Card组件在移动端减少内边距 */
+  .MuiCardContent-root {
+    padding: 12px !important;
+  }
+  
+  /* Paper组件在移动端减少内边距 */
+  .MuiPaper-root {
+    margin: 8px 0 !important;
+  }
+  
+  /* AppBar在移动端优化 */
+  .MuiToolbar-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    min-height: 56px !important;
+  }
+  
+  /* Typography在移动端调整字体大小 */
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Grid间距在移动端减少 */
+  .MuiGrid-container {
+    margin: -4px !important;
+  }
+  
+  .MuiGrid-item {
+    padding: 4px !important;
+  }
+  
+  /* 按钮在移动端调整 */
+  .MuiButton-root {
+    padding: 8px 12px !important;
+  }
+  
+  /* Dialog在移动端优化 */
+  .MuiDialog-paper {
+    margin: 8px !important;
+    max-height: calc(100% - 16px) !important;
+  }
+  
+  /* Menu在移动端优化 */
+  .MuiMenu-paper {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 超小屏幕进一步优化 */
+  .MuiContainer-root {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  
+  .MuiCardContent-root {
+    padding: 8px !important;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.3rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1rem !important;
+  }
+  
+  .MuiPaper-root {
+    margin: 4px 0 !important;
+  }
+}

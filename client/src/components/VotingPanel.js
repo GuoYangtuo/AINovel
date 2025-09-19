@@ -15,9 +15,20 @@ import {
   Timer
 } from '@mui/icons-material';
 import { useSocket } from '../contexts/SocketContext';
+import DiscussionPanel from './DiscussionPanel';
 import toast from 'react-hot-toast';
 
-const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaining, formatTime, totalVotes }) => {
+const VotingPanel = ({ 
+  choices, 
+  votes, 
+  userVote, 
+  isVoting, 
+  disabled, 
+  timeRemaining, 
+  formatTime, 
+  totalVotes,
+  discussion 
+}) => {
   const { vote } = useSocket();
 
   const handleVote = (choice) => {
@@ -60,7 +71,8 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaini
   };
 
   return (
-    <Card sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
+    <Box>
+      <Card sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <HowToVote sx={{ mr: 1, color: 'primary.main' }} />
@@ -95,7 +107,11 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaini
         </Box>
 
         {!isVoting && (
-          <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(255, 193, 7, 0.1)' }}>
+          <Paper sx={{ 
+        p: { xs: 1.5, sm: 2, md: 2 }, 
+        mb: { xs: 2, sm: 2.5, md: 3 }, 
+        bgcolor: 'rgba(255, 193, 7, 0.1)' 
+      }}>
             <Typography variant="body2" color="warning.main" textAlign="center">
               故事生成中，请稍等片刻...
             </Typography>
@@ -219,7 +235,11 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaini
         </Box>
 
         {getTotalVotes() === 0 && isVoting && (
-          <Paper sx={{ p: 2, mt: 2, bgcolor: 'rgba(33, 150, 243, 0.1)' }}>
+          <Paper sx={{ 
+          p: { xs: 1.5, sm: 2, md: 2 }, 
+          mt: 2, 
+          bgcolor: 'rgba(33, 150, 243, 0.1)' 
+        }}>
             <Typography variant="body2" color="info.main" textAlign="center">
               暂无投票，点击选项开始投票！
             </Typography>
@@ -247,6 +267,13 @@ const VotingPanel = ({ choices, votes, userVote, isVoting, disabled, timeRemaini
         )}
       </CardContent>
     </Card>
+
+      {/* 讨论区组件 */}
+      <DiscussionPanel 
+        discussion={discussion} 
+        isVoting={isVoting} 
+      />
+    </Box>
   );
 };
 

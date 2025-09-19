@@ -1,5 +1,220 @@
 const { OpenAI } = require('openai');
 const templateService = require('./templateService');
+const fs = require('fs');
+const path = require('path');
+
+// HTML日志记录器类
+class HtmlLogger {
+  constructor(roomId) {
+    this.roomId = roomId;
+    this.logFilePath = path.join(__dirname, '..', 'data', `room_${roomId}_logs.html`);
+    this.initializeLogFile();
+  }
+
+  initializeLogFile() {
+    const logDir = path.dirname(this.logFilePath);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房间 ${this.roomId} 日志</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        .log-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 3px solid #007acc;
+            background-color: #2d2d30;
+            border-radius: 3px;
+        }
+        .log-timestamp {
+            color: #608b4e;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        .log-type {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .log-prompt {
+            color: #ce9178;
+            background-color: #3c3c3c;
+            padding: 8px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-size: 0.9em;
+        }
+        .log-response {
+            color: #9cdcfe;
+            background-color: #3c3c3c;
+            padding: 8px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-size: 0.9em;
+        }
+        .log-error {
+            color: #f44747;
+            background-color: #3c3c3c;
+            padding: 8px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+        }
+        .log-info {
+            color: #4ec9b0;
+        }
+        .log-warning {
+            color: #dcdcaa;
+        }
+        .log-success {
+            color: #4ec9b0;
+        }
+        .log-voting {
+            color: #dcdcaa;
+            background-color: #3c3c3c;
+            padding: 8px;
+            border-radius: 3px;
+        }
+        .log-state {
+            color: #c586c0;
+            background-color: #3c3c3c;
+            padding: 8px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>房间 ${this.roomId} 实时日志</h1>
+    <div id="logs-container">
+    </div>
+    <script>
+        // 自动滚动到最新日志
+        function scrollToBottom() {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        
+        // 页面加载完成后滚动到底部
+        window.addEventListener('load', scrollToBottom);
+        
+        // 定期检查新内容并滚动
+        setInterval(scrollToBottom, 2000);
+    </script>
+</body>
+</html>`;
+
+    fs.writeFileSync(this.logFilePath, htmlContent, 'utf8');
+  }
+
+  log(type, content, data = null) {
+    const timestamp = new Date().toLocaleString('zh-CN');
+    const logEntry = this.createLogEntry(type, content, data, timestamp);
+    
+    // 读取现有内容
+    let existingContent = '';
+    if (fs.existsSync(this.logFilePath)) {
+      existingContent = fs.readFileSync(this.logFilePath, 'utf8');
+    }
+    
+    // 在 </div> 标签前插入新日志
+    const insertPosition = existingContent.lastIndexOf('</div>');
+    if (insertPosition !== -1) {
+      const newContent = existingContent.slice(0, insertPosition) + logEntry + existingContent.slice(insertPosition);
+      fs.writeFileSync(this.logFilePath, newContent, 'utf8');
+    }
+  }
+
+  createLogEntry(type, content, data, timestamp) {
+    let logClass = 'log-info';
+    let displayContent = content;
+    
+    switch (type) {
+      case 'prompt':
+        logClass = 'log-prompt';
+        displayContent = `[PROMPT] ${content}`;
+        break;
+      case 'response':
+        logClass = 'log-response';
+        displayContent = `[RESPONSE] ${content}`;
+        break;
+      case 'error':
+        logClass = 'log-error';
+        displayContent = `[ERROR] ${content}`;
+        break;
+      case 'warning':
+        logClass = 'log-warning';
+        displayContent = `[WARNING] ${content}`;
+        break;
+      case 'success':
+        logClass = 'log-success';
+        displayContent = `[SUCCESS] ${content}`;
+        break;
+      case 'voting':
+        logClass = 'log-voting';
+        displayContent = `[VOTING] ${content}`;
+        break;
+      case 'state':
+        logClass = 'log-state';
+        displayContent = `[STATE] ${content}`;
+        break;
+    }
+
+    let dataSection = '';
+    if (data) {
+      dataSection = `<div class="log-state">${JSON.stringify(data, null, 2)}</div>`;
+    }
+
+    return `
+    <div class="log-entry">
+        <div class="log-timestamp">${timestamp}</div>
+        <div class="log-type ${logClass}">${displayContent}</div>
+        ${dataSection}
+    </div>`;
+  }
+
+  logPrompt(prompt) {
+    this.log('prompt', prompt);
+  }
+
+  logResponse(response) {
+    this.log('response', response);
+  }
+
+  logError(error) {
+    this.log('error', error.message || error);
+  }
+
+  logInfo(info) {
+    this.log('info', info);
+  }
+
+  logWarning(warning) {
+    this.log('warning', warning);
+  }
+
+  logSuccess(success) {
+    this.log('success', success);
+  }
+
+  logVoting(voting) {
+    this.log('voting', voting);
+  }
+
+  logState(state) {
+    this.log('state', '房间状态更新', state);
+  }
+}
 
 // 旧的硬编码人物数据（仅用于向后兼容，新房间应使用模板系统）
 const 人物s = [
@@ -72,6 +287,7 @@ class NovelRoom {
     this.createdAt = new Date();
     this.connectedUsers = new Set();
     this.templateData = templateData; // 模板数据
+    this.logger = new HtmlLogger(roomId); // 初始化日志记录器
     
     this.client = new OpenAI({
       apiKey: "sk-48d5645fd30347fe905e51c2d431113f",
@@ -88,6 +304,12 @@ class NovelRoom {
       storyHistory: []
     };
     
+    // 讨论区数据
+    this.discussion = {
+      messages: [], // 当前讨论区的消息
+      isActive: false // 讨论区是否激活（在投票阶段激活）
+    };
+    
     this.io = null;
     this.votingTimer = null;
   }
@@ -95,11 +317,13 @@ class NovelRoom {
   // 添加用户到房间
   addUser(userId) {
     this.connectedUsers.add(userId);
+    this.logger.logInfo(`用户 ${userId} 加入房间`);
   }
 
   // 移除用户从房间
   removeUser(userId) {
     this.connectedUsers.delete(userId);
+    this.logger.logInfo(`用户 ${userId} 离开房间`);
   }
 
   // 获取房间信息
@@ -118,19 +342,27 @@ class NovelRoom {
   async initializeNovel(io) {
     this.io = io;
     try {
-      console.log(`正在为房间 ${this.roomId} 生成初始故事...`);
+      this.logger.logInfo(`正在为房间 ${this.roomId} 生成初始故事...`);
       
       const processed = await this.调用AI带重试(async () => {
         return await this.生成初始故事();
       });
       
-      console.log(`房间 ${this.roomId} 初始故事生成完成`);
+      this.logger.logSuccess(`房间 ${this.roomId} 初始故事生成完成`);
       
       this.novelState.currentStory = processed.story;
       this.novelState.choices = processed.choices;
       this.novelState.isVoting = true;
       this.novelState.votes = {};
       this.novelState.userVotes = {};
+      
+      // 记录房间状态
+      this.logger.logState({
+        currentStory: this.novelState.currentStory.substring(0, 200) + '...',
+        choices: this.novelState.choices,
+        isVoting: this.novelState.isVoting,
+        connectedUsers: this.connectedUsers.size
+      });
       
       this.startVotingTimer();
       
@@ -140,7 +372,7 @@ class NovelRoom {
       }
       
     } catch (error) {
-      console.error(`房间 ${this.roomId} 初始化小说失败:`, error);
+      this.logger.logError(`房间 ${this.roomId} 初始化小说失败: ${error.message}`);
       // 广播错误状态
       if (this.io) {
         this.io.to(this.roomId).emit('novel_error', {
@@ -179,13 +411,13 @@ class NovelRoom {
         ],
         stream: false
       });
-      console.log("生成初始故事的response");
-      console.log(response.choices[0].message.content);
-      console.log("生成初始故事的response结束");
+      this.logger.logResponse("生成初始故事的response");
+      this.logger.logResponse(response.choices[0].message.content);
+      this.logger.logResponse("生成初始故事的response结束");
       
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('生成初始故事失败:', error);
+      this.logger.logError(`生成初始故事失败: ${error.message}`);
       throw error;
     }
   }
@@ -219,9 +451,9 @@ class NovelRoom {
 用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
     }
 
-    console.log("继续故事的prompt");
-    console.log(prompt);
-    console.log("继续故事的prompt结束");
+    this.logger.logPrompt("继续故事的prompt");
+    this.logger.logPrompt(prompt);
+    this.logger.logPrompt("继续故事的prompt结束");
 
     try {
       const response = await this.client.chat.completions.create({
@@ -233,13 +465,13 @@ class NovelRoom {
         stream: false
       });
       
-      console.log("继续故事的response");
-      console.log(response.choices[0].message.content);
-      console.log("继续故事的response结束");
+      this.logger.logResponse("继续故事的response");
+      this.logger.logResponse(response.choices[0].message.content);
+      this.logger.logResponse("继续故事的response结束");
 
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('继续故事失败:', error);
+      this.logger.logError(`继续故事失败: ${error.message}`);
       throw error;
     }
   }
@@ -248,15 +480,15 @@ class NovelRoom {
   async 调用AI带重试(promptFunction, maxRetries = 4) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`第${attempt}次尝试调用AI...`);
+        this.logger.logInfo(`第${attempt}次尝试调用AI...`);
         const response = await promptFunction();
         const processed = this.处理回答(response);
-        console.log(`第${attempt}次尝试成功`);
+        this.logger.logSuccess(`第${attempt}次尝试成功`);
         return processed;
       } catch (error) {
-        console.error(`第${attempt}次尝试失败:`, error.message);
+        this.logger.logError(`第${attempt}次尝试失败: ${error.message}`);
         if (attempt === maxRetries) {
-          console.error('所有重试都失败了');
+          this.logger.logError('所有重试都失败了');
           throw new Error(`AI调用失败，已重试${maxRetries}次: ${error.message}`);
         }
         // 等待一段时间再重试
@@ -287,7 +519,7 @@ class NovelRoom {
       
       return { story, choices };
     } catch (error) {
-      console.error('处理回答失败:', error);
+      this.logger.logError(`处理回答失败: ${error.message}`);
       throw error; // 抛出错误而不是返回默认值
     }
   }
@@ -295,7 +527,7 @@ class NovelRoom {
   // 添加投票
   addVote(userId, choice) {
     if (!this.novelState.isVoting) {
-      console.log('当前不在投票阶段s');
+      this.logger.logWarning('当前不在投票阶段');
       return { success: false, message: '当前不在投票阶段' };
     }
 
@@ -312,12 +544,71 @@ class NovelRoom {
     // 添加新投票
     this.novelState.userVotes[userId] = choice;
     this.novelState.votes[choice] = (this.novelState.votes[choice] || 0) + 1;
+    
+    // 记录投票
+    this.logger.logVoting(`用户 ${userId} 投票: ${choice}`);
 
     return { 
       success: true, 
       votes: this.novelState.votes,
       message: '投票成功'
     };
+  }
+
+  // 添加讨论区消息
+  addDiscussionMessage(userId, username, message) {
+    if (!this.discussion.isActive) {
+      return { success: false, message: '当前讨论区未激活' };
+    }
+
+    if (!message || message.trim().length === 0) {
+      return { success: false, message: '消息内容不能为空' };
+    }
+
+    if (message.length > 500) {
+      return { success: false, message: '消息长度不能超过500字符' };
+    }
+
+    const newMessage = {
+      id: Date.now() + Math.random(), // 简单的ID生成
+      userId,
+      username,
+      message: message.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    this.discussion.messages.push(newMessage);
+    
+    // 记录讨论区消息
+    this.logger.logInfo(`讨论区消息 - ${username}: ${message}`);
+
+    // 限制讨论区消息数量，避免内存过多占用
+    if (this.discussion.messages.length > 100) {
+      this.discussion.messages = this.discussion.messages.slice(-50); // 保留最近50条
+    }
+
+    return { 
+      success: true, 
+      message: newMessage
+    };
+  }
+
+  // 获取当前讨论区消息
+  getDiscussionMessages() {
+    return this.discussion.messages;
+  }
+
+  // 激活讨论区
+  activateDiscussion() {
+    this.discussion.isActive = true;
+  }
+
+  // 清空讨论区并归档
+  clearDiscussion() {
+    const archivedMessages = [...this.discussion.messages];
+    this.discussion.messages = [];
+    this.discussion.isActive = false;
+    return archivedMessages;
   }
 
   // 开始投票计时器
@@ -330,6 +621,12 @@ class NovelRoom {
       clearTimeout(this.votingTimer);
     }
 
+    // 激活讨论区
+    this.activateDiscussion();
+    
+    // 记录投票开始
+    this.logger.logVoting(`投票开始，时长: ${VOTING_DURATION / 1000}秒`);
+
     this.votingTimer = setTimeout(async () => {
       await this.processVotingResult();
     }, VOTING_DURATION);
@@ -338,7 +635,8 @@ class NovelRoom {
     if (this.io) {
       this.io.to(this.roomId).emit('voting_started', {
         endTime: this.novelState.votingEndTime,
-        choices: this.novelState.choices
+        choices: this.novelState.choices,
+        discussionActive: true
       });
     }
   }
@@ -361,7 +659,7 @@ class NovelRoom {
     // 如果没有投票，选择第一个选项
     if (maxVotes === 0) {
       winningChoice = this.novelState.choices[0];
-      console.log('没有投票，延长5分钟');
+      this.logger.logVoting('没有投票，延长5分钟');
       
       // 延长5分钟
       this.startVotingTimer();
@@ -375,7 +673,7 @@ class NovelRoom {
       return;
     }
 
-    console.log(`投票结果: ${winningChoice} (${maxVotes}票)`);
+    this.logger.logVoting(`投票结果: ${winningChoice} (${maxVotes}票)`);
 
     try {
       // 广播AI生成状态
@@ -386,11 +684,15 @@ class NovelRoom {
         });
       }
 
+      // 清空讨论区并归档消息
+      const archivedDiscussion = this.clearDiscussion();
+
       // 保存当前故事到历史
       this.novelState.storyHistory.push({
         story: this.novelState.currentStory,
         winningChoice,
         votes: { ...this.novelState.votes },
+        discussion: archivedDiscussion, // 添加讨论记录到历史
         timestamp: new Date().toISOString()
       });
 
@@ -425,7 +727,7 @@ class NovelRoom {
       this.startVotingTimer();
 
     } catch (error) {
-      console.error('生成下一段故事失败:', error);
+      this.logger.logError(`生成下一段故事失败: ${error.message}`);
       
       // 如果生成失败，重新开始投票
       this.novelState.isVoting = true;
@@ -444,7 +746,11 @@ class NovelRoom {
     return {
       ...this.novelState,
       timeRemaining: this.novelState.votingEndTime ? 
-        Math.max(0, this.novelState.votingEndTime - Date.now()) : 0
+        Math.max(0, this.novelState.votingEndTime - Date.now()) : 0,
+      discussion: {
+        messages: this.discussion.messages,
+        isActive: this.discussion.isActive
+      }
     };
   }
 }
@@ -464,7 +770,7 @@ class NovelRoomManager {
 
     const room = new NovelRoom(roomId, title, templateData);
     this.rooms.set(roomId, room);
-    console.log(`创建新的小说房间: ${roomId} - ${title}`);
+    // 房间创建日志由房间内部的logger处理
     return room;
   }
 
@@ -489,7 +795,7 @@ class NovelRoomManager {
       clearTimeout(room.votingTimer);
     }
     this.rooms.delete(roomId);
-    console.log(`删除房间: ${roomId}`);
+    // 房间删除日志由房间内部的logger处理
   }
 
   // 用户加入房间
@@ -531,9 +837,9 @@ class NovelRoomManager {
         const roomData1 = templateService.createRoomFromTemplate(testTemplate);
         const room1 = this.createRoom('room1', '小叶的超能力觉醒之路', roomData1);
         await room1.initializeNovel(io);
-        console.log('测试房间1创建成功');
+        // 测试房间1创建成功
       } else {
-        console.log('测试模板未找到，创建默认房间1');
+        // 测试模板未找到，创建默认房间1
         const room1 = this.createRoom('room1', '小叶的超能力觉醒之路');
         await room1.initializeNovel(io);
       }
@@ -543,16 +849,16 @@ class NovelRoomManager {
         const roomData2 = templateService.createRoomFromTemplate(fantasyTemplate);
         const room2 = this.createRoom('room2', '魔法学院的奇幻冒险', roomData2);
         await room2.initializeNovel(io);
-        console.log('测试房间2创建成功');
+        // 测试房间2创建成功
       } else {
-        console.log('奇幻模板未找到，创建默认房间2');
+        // 奇幻模板未找到，创建默认房间2
         const room2 = this.createRoom('room2', '魔法学院的奇幻冒险');
         await room2.initializeNovel(io);
       }
       
-      console.log('测试房间初始化完成');
+      // 测试房间初始化完成
     } catch (error) {
-      console.error('测试房间初始化失败:', error);
+      // 测试房间初始化失败，错误信息由各个房间的logger记录
     }
   }
 }
@@ -570,6 +876,16 @@ module.exports = {
   addVote: (userId, choice, roomId = 'room1') => {
     const room = novelRoomManager.getRoom(roomId);
     return room ? room.addVote(userId, choice) : { success: false, message: '房间不存在' };
+  },
+  
+  // 讨论区相关接口
+  addDiscussionMessage: (userId, username, message, roomId) => {
+    const room = novelRoomManager.getRoom(roomId);
+    return room ? room.addDiscussionMessage(userId, username, message) : { success: false, message: '房间不存在' };
+  },
+  getDiscussionMessages: (roomId) => {
+    const room = novelRoomManager.getRoom(roomId);
+    return room ? room.getDiscussionMessages() : [];
   },
   
   // 新的房间管理接口

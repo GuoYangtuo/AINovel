@@ -32,7 +32,8 @@ const StoryDisplay = ({
   timeRemaining,
   totalVotes,
   formatTime,
-  connected
+  connected,
+  discussion = { messages: [], isActive: false }
 }) => {
   // 将故事文本分段处理
   const formatStoryText = (text) => {
@@ -215,8 +216,54 @@ const StoryDisplay = ({
               </Box>
             </Paper>
 
-            {/* 投票结果 */}
-            {renderVotingResult(historyItem.winningChoice, historyItem.votes, historyItem.timestamp)}
+            {/* 投票结果和讨论记录 */}
+            <Box display="flex" gap={2} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+              {/* 投票结果 */}
+              <Box sx={{ flex: 1 }}>
+                {renderVotingResult(historyItem.winningChoice, historyItem.votes, historyItem.timestamp)}
+              </Box>
+              
+              {/* 讨论记录 */}
+              {historyItem.discussion && historyItem.discussion.length > 0 && (
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      bgcolor: 'rgba(102, 126, 234, 0.05)',
+                      border: '1px solid rgba(102, 126, 234, 0.2)',
+                      borderRadius: 1,
+                      height: '100%'
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        讨论记录 ({historyItem.discussion.length}条)
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ maxHeight: 150, overflow: 'auto' }}>
+                      {historyItem.discussion.map((msg, msgIndex) => (
+                        <Box key={msg.id || msgIndex} mb={0.5}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              wordBreak: 'break-word',
+                              lineHeight: 1.3,
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <Box component="span" sx={{ fontWeight: 'bold', color: 'primary.main', mr: 1 }}>
+                              {msg.username || '匿名用户'}:
+                            </Box>
+                            {msg.message}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Paper>
+                </Box>
+              )}
+            </Box>
             
             {index < storyHistory.length - 1 && (
               <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
@@ -229,7 +276,7 @@ const StoryDisplay = ({
           <Box sx={{ mb: 3 }}>
             <Paper
               sx={{
-                p: 3,
+                p: { xs: 0, sm: 1, md: 3 },
                 bgcolor: 'rgba(255, 255, 255, 0.05)',
                 border: '2px solid rgba(102, 126, 234, 0.3)',
                 borderRadius: 2,
@@ -246,7 +293,7 @@ const StoryDisplay = ({
                 }
               }}
             >
-              <Box sx={{ pl: 2 }}>
+              <Box sx={{ pl: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold' }}>
                     第 {storyHistory.length + 1} 段故事 (最新)
@@ -267,7 +314,12 @@ const StoryDisplay = ({
             <Box sx={{ mt: 3 }}>
               {isGenerating ? (
                 /* AI生成中的提示 */
-                <Paper sx={{ p: 3, mb: 3, bgcolor: 'rgba(255, 152, 0, 0.1)', border: '1px solid rgba(255, 152, 0, 0.2)' }}>
+                <Paper sx={{ 
+          p: { xs: 2, sm: 2.5, md: 3 }, 
+          mb: { xs: 2, sm: 2.5, md: 3 }, 
+          bgcolor: 'rgba(255, 152, 0, 0.1)', 
+          border: '1px solid rgba(255, 152, 0, 0.2)' 
+        }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <AccessTime sx={{ mr: 1, color: 'warning.main' }} />
                     <Typography variant="h6" color="warning.main">
@@ -292,6 +344,7 @@ const StoryDisplay = ({
                   timeRemaining={timeRemaining}
                   formatTime={formatTime}
                   totalVotes={totalVotes}
+                  discussion={discussion}
                 />
               )}
             </Box>

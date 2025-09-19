@@ -45,9 +45,6 @@ if not exist node_modules (
     )
 )
 
-echo 等待后端服务器启动...
-timeout /t 5 /nobreak
-
 echo 启动前端应用...
 start cmd /k "title AI小说前端 && echo 前端应用启动中... && npm start"
 

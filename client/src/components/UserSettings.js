@@ -31,7 +31,7 @@ import { useTheme, themeOptions } from '../contexts/ThemeContext';
 import toast from 'react-hot-toast';
 
 const UserSettings = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, saveUserSettings } = useAuth();
   const { currentTheme, changeTheme } = useTheme();
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
@@ -56,45 +56,43 @@ const UserSettings = () => {
     }));
   };
 
-  const handleThemeChange = (themeName) => {
+  const handleThemeChange = async (themeName) => {
+    // 立即更新界面
     setSettings(prev => ({ ...prev, theme: themeName }));
     changeTheme(themeName);
+    
+    // 自动保存到后端
+    const result = await saveUserSettings({
+      username: settings.username,
+      email: settings.email,
+      theme: themeName
+    });
+
+    if (result.success) {
+      toast.success('主题已保存！');
+    } else {
+      toast.error(result.message || '保存主题失败');
+    }
   };
 
   const handleSaveSettings = async () => {
     setIsLoading(true);
-    try {
-      // 保存主题到后端
-      const response = await fetch('/api/auth/update-settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          username: settings.username,
-          email: settings.email,
-          theme: settings.theme
-        })
-      });
+    
+    const result = await saveUserSettings({
+      username: settings.username,
+      email: settings.email,
+      theme: settings.theme
+    });
 
-      if (response.ok) {
-        const responseData = await response.json();
-        // 更新用户信息
-        updateUser({
-          username: settings.username,
-          email: settings.email,
-          theme: settings.theme
-        });
-        toast.success('设置保存成功！');
-      } else {
-        throw new Error('保存失败');
-      }
-    } catch (error) {
-      toast.error('保存设置失败，请重试');
-    } finally {
-      setIsLoading(false);
+    if (result.success) {
+      // 确保主题也同步到主题上下文
+      changeTheme(settings.theme);
+      toast.success('设置保存成功！');
+    } else {
+      toast.error(result.message || '保存设置失败');
     }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -121,14 +119,18 @@ const UserSettings = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ py: 3, pt: 10 }}>
-        <Grid container spacing={3}>
+      <Container maxWidth="md" sx={{ 
+      py: 3, 
+      pt: 10, 
+      px: { xs: 1, sm: 2, md: 3 } 
+    }}>
+        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
           {/* 用户信息卡片 */}
           <Grid item xs={12}>
             <Paper
               elevation={0}
               sx={{
-                p: 3,
+                p: { xs: 2, sm: 2.5, md: 3 },
                 background: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: 3,

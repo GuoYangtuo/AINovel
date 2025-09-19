@@ -95,7 +95,11 @@ export const SocketProvider = ({ children }) => {
         setNovelState(prev => ({
           ...prev,
           votingEndTime: data.endTime,
-          isVoting: true
+          isVoting: true,
+          discussion: {
+            ...prev.discussion,
+            isActive: data.discussionActive || false
+          }
         }));
         toast.success('新的投票开始了！');
       });
@@ -116,6 +120,22 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('story_error', (data) => {
+        toast.error(data.message);
+      });
+
+      // 讨论区相关事件
+      newSocket.on('discussion_message', (message) => {
+        console.log('收到讨论区消息:', message);
+        setNovelState(prev => ({
+          ...prev,
+          discussion: {
+            ...prev.discussion,
+            messages: [...(prev.discussion?.messages || []), message]
+          }
+        }));
+      });
+
+      newSocket.on('discussion_error', (data) => {
         toast.error(data.message);
       });
 

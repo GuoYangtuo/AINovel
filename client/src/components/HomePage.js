@@ -157,12 +157,20 @@ const HomePage = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 3, pt: 10 }}>
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          py: 3, 
+          pt: 10,
+          px: { xs: 1, sm: 2, md: 3 }
+        }}
+      >
         <Paper
           elevation={0}
           sx={{
-            p: 4,
-            mb: 4,
+            p: { xs: 2, sm: 3, md: 4 },
+            mb: { xs: 2, sm: 3, md: 4 },
+            mx: { xs: 0, sm: 'auto' },
             background: 'rgba(255, 255, 255, 0.1)',
             backdropFilter: 'blur(10px)',
             borderRadius: 3,
@@ -197,7 +205,7 @@ const HomePage = () => {
             </Alert>
           )}
 
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
             {novels.map((novel) => (
               <Grid item xs={12} md={6} key={novel.roomId}>
                 <Card
@@ -216,7 +224,7 @@ const HomePage = () => {
                     }
                   }}
                 >
-                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                  <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3 } }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                       <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', flex: 1 }}>
                         {novel.title}

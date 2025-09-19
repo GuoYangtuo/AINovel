@@ -33,7 +33,7 @@ const Login = () => {
     
     const result = await login(username, password);
     if (result.success) {
-      navigate('/novel');
+      navigate('/');
     }
     
     setLoading(false);
@@ -45,10 +45,11 @@ const Login = () => {
       alignItems: 'center', 
       justifyContent: 'center', 
       minHeight: '100vh',
-      py: 3
+      py: 3,
+      px: { xs: 1, sm: 2, md: 3 }
     }}>
       <Card sx={{ width: '100%', maxWidth: 400 }}>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
           <Box textAlign="center" mb={3}>
             <Typography variant="h4" component="h1" gutterBottom sx={{ 
               fontWeight: 'bold',
