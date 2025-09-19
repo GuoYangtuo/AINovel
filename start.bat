@@ -57,6 +57,3 @@ echo ================================
 echo.
 echo 浏览器将自动打开，如果没有请手动访问:
 echo http://localhost:3000
-echo.
-echo 按任意键退出...
-pause >nul

@@ -107,9 +107,6 @@ class HtmlLogger {
         
         // 页面加载完成后滚动到底部
         window.addEventListener('load', scrollToBottom);
-        
-        // 定期检查新内容并滚动
-        setInterval(scrollToBottom, 2000);
     </script>
 </body>
 </html>`;
@@ -317,13 +314,13 @@ class NovelRoom {
   // 添加用户到房间
   addUser(userId) {
     this.connectedUsers.add(userId);
-    this.logger.logInfo(`用户 ${userId} 加入房间`);
+    //this.logger.logInfo(`用户 ${userId} 加入房间`);
   }
 
   // 移除用户从房间
   removeUser(userId) {
     this.connectedUsers.delete(userId);
-    this.logger.logInfo(`用户 ${userId} 离开房间`);
+    //this.logger.logInfo(`用户 ${userId} 离开房间`);
   }
 
   // 获取房间信息
@@ -401,6 +398,7 @@ class NovelRoom {
 ["{选项1}","{选项2}","{选项3}"]
 用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
     }
+    this.logger.logPrompt(prompt);
 
     try {
       const response = await this.client.chat.completions.create({
@@ -411,9 +409,7 @@ class NovelRoom {
         ],
         stream: false
       });
-      this.logger.logResponse("生成初始故事的response");
       this.logger.logResponse(response.choices[0].message.content);
-      this.logger.logResponse("生成初始故事的response结束");
       
       return response.choices[0].message.content;
     } catch (error) {
@@ -451,9 +447,7 @@ class NovelRoom {
 用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
     }
 
-    this.logger.logPrompt("继续故事的prompt");
     this.logger.logPrompt(prompt);
-    this.logger.logPrompt("继续故事的prompt结束");
 
     try {
       const response = await this.client.chat.completions.create({
@@ -465,9 +459,7 @@ class NovelRoom {
         stream: false
       });
       
-      this.logger.logResponse("继续故事的response");
       this.logger.logResponse(response.choices[0].message.content);
-      this.logger.logResponse("继续故事的response结束");
 
       return response.choices[0].message.content;
     } catch (error) {
@@ -580,7 +572,7 @@ class NovelRoom {
     this.discussion.messages.push(newMessage);
     
     // 记录讨论区消息
-    this.logger.logInfo(`讨论区消息 - ${username}: ${message}`);
+    //this.logger.logInfo(`讨论区消息 - ${username}: ${message}`);
 
     // 限制讨论区消息数量，避免内存过多占用
     if (this.discussion.messages.length > 100) {
@@ -625,7 +617,7 @@ class NovelRoom {
     this.activateDiscussion();
     
     // 记录投票开始
-    this.logger.logVoting(`投票开始，时长: ${VOTING_DURATION / 1000}秒`);
+    //this.logger.logVoting(`投票开始，时长: ${VOTING_DURATION / 1000}秒`);
 
     this.votingTimer = setTimeout(async () => {
       await this.processVotingResult();
@@ -659,7 +651,7 @@ class NovelRoom {
     // 如果没有投票，选择第一个选项
     if (maxVotes === 0) {
       winningChoice = this.novelState.choices[0];
-      this.logger.logVoting('没有投票，延长5分钟');
+      //this.logger.logVoting('没有投票，延长5分钟');
       
       // 延长5分钟
       this.startVotingTimer();

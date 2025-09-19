@@ -106,14 +106,14 @@ const DiscussionPanel = ({
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             讨论区
           </Typography>
-          {isVoting && discussion.isActive && (
+          {/*isVoting && discussion.isActive && (
             <Chip
               label="活跃"
               color="success"
               size="small"
               sx={{ ml: 2 }}
             />
-          )}
+          )*/}
         </Box>
 
         {error && (
@@ -146,7 +146,7 @@ const DiscussionPanel = ({
               <Chat sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
               <Typography variant="body2">
                 {isVoting && discussion.isActive 
-                  ? '开始讨论你的选择吧！' 
+                  ? '向大家分享你的想法吧！' 
                   : '讨论区暂时关闭'
                 }
               </Typography>
@@ -180,7 +180,7 @@ const DiscussionPanel = ({
               fullWidth
               multiline
               maxRows={3}
-              placeholder="分享你的想法..."
+              placeholder="回车Enter发送"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
