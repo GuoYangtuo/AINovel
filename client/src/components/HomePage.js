@@ -22,7 +22,11 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import {
   ExitToApp,
@@ -32,19 +36,23 @@ import {
   Schedule,
   BookmarkBorder,
   Add,
-  Settings
+  Settings,
+  MonetizationOn
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 const HomePage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, fetchCoins, rechargeCoins } = useAuth();
   const navigate = useNavigate();
   const [novels, setNovels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [logoutDialog, setLogoutDialog] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const [rechargeDialog, setRechargeDialog] = useState(false);
+  const [rechargeAmount, setRechargeAmount] = useState('');
+  const [rechargeLoading, setRechargeLoading] = useState(false);
 
   // 获取小说列表
   useEffect(() => {
@@ -73,6 +81,13 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // 获取用户金币余额
+  useEffect(() => {
+    if (user) {
+      fetchCoins();
+    }
+  }, []);
+
   const handleLogout = () => {
     logout();
     setLogoutDialog(false);
@@ -94,6 +109,27 @@ const HomePage = () => {
   const handleGoToSettings = () => {
     handleUserMenuClose();
     navigate('/settings');
+  };
+
+  const handleOpenRecharge = () => {
+    handleUserMenuClose();
+    setRechargeDialog(true);
+  };
+
+  const handleRecharge = async () => {
+    const amount = parseInt(rechargeAmount);
+    if (!amount || amount <= 0) {
+      return;
+    }
+
+    setRechargeLoading(true);
+    const result = await rechargeCoins(amount);
+    setRechargeLoading(false);
+
+    if (result.success) {
+      setRechargeDialog(false);
+      setRechargeAmount('');
+    }
   };
 
   const joinNovel = (roomId) => {
@@ -125,7 +161,7 @@ const HomePage = () => {
       >
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            AI交互小说 - 选择小说
+            选择之书 - 选择你想要体验的故事
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -178,10 +214,10 @@ const HomePage = () => {
           }}
         >
           <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', mb: 2 }}>
-            欢迎来到AI交互小说世界
+            选择之书
           </Typography>
           <Typography variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            选择一个正在进行的故事，参与其中，影响剧情发展
+            选择一个正在进行的故事，参与其中，剧情的发展会被你的选择影响
           </Typography>
           
           {loading && (
@@ -319,6 +355,21 @@ const HomePage = () => {
           horizontal: 'right',
         }}
       >
+        <MenuItem disabled sx={{ color: 'white', opacity: 1 }}>
+          <ListItemIcon>
+            <MonetizationOn sx={{ color: '#ffd700' }} />
+          </ListItemIcon>
+          <ListItemText 
+            primary={`金币余额: ${user?.coins || 0}`} 
+            sx={{ '& .MuiListItemText-primary': { fontWeight: 'bold' } }}
+          />
+        </MenuItem>
+        <MenuItem onClick={handleOpenRecharge}>
+          <ListItemIcon>
+            <MonetizationOn sx={{ color: 'white' }} />
+          </ListItemIcon>
+          <ListItemText primary="充值金币" />
+        </MenuItem>
         <MenuItem onClick={handleCreateRoom}>
           <ListItemIcon>
             <Add sx={{ color: 'white' }} />
@@ -357,6 +408,82 @@ const HomePage = () => {
           </Button>
           <Button onClick={handleLogout} color="primary" variant="contained">
             确认退出
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 充值对话框 */}
+      <Dialog
+        open={rechargeDialog}
+        onClose={() => !rechargeLoading && setRechargeDialog(false)}
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            minWidth: '400px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MonetizationOn sx={{ color: '#ffd700' }} />
+          金币充值
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            当前金币余额: {user?.coins || 0}
+          </Typography>
+          
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              选择充值金额:
+            </Typography>
+            <Grid container spacing={1} sx={{ mb: 2 }}>
+              {[100, 500, 1000, 2000].map((amount) => (
+                <Grid item xs={6} key={amount}>
+                  <Button
+                    variant={rechargeAmount === amount.toString() ? "contained" : "outlined"}
+                    fullWidth
+                    onClick={() => setRechargeAmount(amount.toString())}
+                    sx={{ py: 1 }}
+                  >
+                    {amount} 金币
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="自定义充值金额"
+            value={rechargeAmount}
+            onChange={(e) => setRechargeAmount(e.target.value)}
+            type="number"
+            inputProps={{ min: 1, max: 10000 }}
+            variant="outlined"
+            disabled={rechargeLoading}
+          />
+          
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            * 最小充值1金币，最大充值10000金币
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setRechargeDialog(false)}
+            disabled={rechargeLoading}
+          >
+            取消
+          </Button>
+          <Button 
+            onClick={handleRecharge} 
+            color="primary" 
+            variant="contained"
+            disabled={rechargeLoading || !rechargeAmount || parseInt(rechargeAmount) <= 0}
+            startIcon={rechargeLoading ? <CircularProgress size={16} /> : <MonetizationOn />}
+          >
+            {rechargeLoading ? '充值中...' : `充值 ${rechargeAmount || 0} 金币`}
           </Button>
         </DialogActions>
       </Dialog>

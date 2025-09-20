@@ -81,7 +81,7 @@ io.on('connection', (socket) => {
   
   // 处理投票
   socket.on('vote', (data) => {
-    const { choice } = data;
+    const { choice, coinsSpent = 0 } = data;
     const userId = socket.userId;
     
     if (!currentRoomId) {
@@ -89,13 +89,22 @@ io.on('connection', (socket) => {
       return;
     }
     
-    const result = addVote(userId, choice, currentRoomId);
+    const result = addVote(userId, choice, currentRoomId, coinsSpent);
     
     if (result.success) {
       // 向房间内所有用户广播投票更新
       io.to(currentRoomId).emit('vote_update', {
         votes: result.votes,
-        userVote: { [userId]: choice }
+        userVote: { [userId]: result.userVote },
+        message: result.message
+      });
+      
+      // 向投票用户发送确认信息
+      socket.emit('vote_success', {
+        choice,
+        coinsSpent,
+        totalVotes: result.userVote.totalVotes,
+        message: result.message
       });
     } else {
       socket.emit('vote_error', { message: result.message });

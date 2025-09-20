@@ -19,7 +19,7 @@ export const SocketProvider = ({ children }) => {
   const [novelState, setNovelState] = useState(null);
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
-  const { token, user } = useAuth();
+  const { token, user, updateUser } = useAuth();
 
   useEffect(() => {
     if (token && user) {
@@ -139,6 +139,23 @@ export const SocketProvider = ({ children }) => {
         toast.error(data.message);
       });
 
+      // 金币相关事件
+      newSocket.on('vote_success', (data) => {
+        if (data.coinsSpent > 0) {
+          toast.success(`投票成功！花费${data.coinsSpent}金币，总计${data.totalVotes}票`);
+        } else {
+          toast.success('投票成功！');
+        }
+      });
+
+      newSocket.on('coins_deducted', (data) => {
+        // 更新用户金币余额
+        if (user) {
+          updateUser({ coins: data.remainingCoins });
+        }
+        toast.info(`金币已扣除：${data.amount}金币 (${data.reason})`);
+      });
+
       // 房间相关事件
       newSocket.on('join_room_success', (data) => {
         console.log('成功加入房间:', data);
@@ -178,9 +195,9 @@ export const SocketProvider = ({ children }) => {
     }
   }, [socket, connected]);
 
-  const vote = useCallback((choice) => {
+  const vote = useCallback((choice, coinsSpent = 0) => {
     if (socket && connected) {
-      socket.emit('vote', { choice });
+      socket.emit('vote', { choice, coinsSpent });
     }
   }, [socket, connected]);
 

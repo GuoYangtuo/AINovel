@@ -154,7 +154,7 @@ const UserSettings = () => {
                     {user?.username}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    欢迎来到AI交互小说世界
+                    欢迎来到 《选择之书》 ！
                   </Typography>
                 </Box>
               </Box>

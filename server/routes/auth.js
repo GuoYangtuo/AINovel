@@ -50,6 +50,7 @@ router.post('/register', async (req, res) => {
       id: uuidv4(),
       username,
       password: hashedPassword,
+      coins: 1000, // 新用户默认1000金币
       createdAt: new Date().toISOString()
     };
     
@@ -62,7 +63,7 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       message: '注册成功',
       token,
-      user: { id: newUser.id, username, theme: 'default' }
+      user: { id: newUser.id, username, theme: 'default', coins: newUser.coins }
     });
     
   } catch (error) {
@@ -100,7 +101,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: '登录成功',
       token,
-      user: { id: user.id, username, theme: user.theme || 'default' }
+      user: { id: user.id, username, theme: user.theme || 'default', coins: user.coins || 0 }
     });
     
   } catch (error) {
@@ -150,12 +151,116 @@ router.put('/update-settings', authenticateToken, async (req, res) => {
         id: users[userIndex].id,
         username: users[userIndex].username,
         email: users[userIndex].email,
-        theme: users[userIndex].theme || 'default'
+        theme: users[userIndex].theme || 'default',
+        coins: users[userIndex].coins || 0
       }
     });
     
   } catch (error) {
     console.error('更新设置错误:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取用户金币余额
+router.get('/coins', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const users = readUsers();
+    const user = users.find(u => u.id === userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    res.json({
+      success: true,
+      coins: user.coins || 0
+    });
+    
+  } catch (error) {
+    console.error('获取金币余额错误:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 金币充值
+router.post('/recharge', authenticateToken, (req, res) => {
+  try {
+    const { amount } = req.body;
+    const userId = req.user.userId;
+    
+    if (!amount || amount <= 0 || !Number.isInteger(amount)) {
+      return res.status(400).json({ message: '充值金额必须是正整数' });
+    }
+    
+    if (amount > 10000) {
+      return res.status(400).json({ message: '单次充值金额不能超过10000' });
+    }
+    
+    const users = readUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    // 增加金币
+    users[userIndex].coins = (users[userIndex].coins || 0) + amount;
+    users[userIndex].updatedAt = new Date().toISOString();
+    
+    writeUsers(users);
+    
+    res.json({
+      success: true,
+      message: `充值成功！获得${amount}金币`,
+      coins: users[userIndex].coins,
+      rechargeAmount: amount
+    });
+    
+  } catch (error) {
+    console.error('充值错误:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 扣除金币（内部接口，用于投票后扣费）
+router.post('/deduct-coins', authenticateToken, (req, res) => {
+  try {
+    const { amount, reason } = req.body;
+    const userId = req.user.userId;
+    
+    if (!amount || amount <= 0 || !Number.isInteger(amount)) {
+      return res.status(400).json({ message: '扣除金额必须是正整数' });
+    }
+    
+    const users = readUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    const currentCoins = users[userIndex].coins || 0;
+    if (currentCoins < amount) {
+      return res.status(400).json({ message: '金币余额不足' });
+    }
+    
+    // 扣除金币
+    users[userIndex].coins = currentCoins - amount;
+    users[userIndex].updatedAt = new Date().toISOString();
+    
+    writeUsers(users);
+    
+    res.json({
+      success: true,
+      message: `扣除成功！消费${amount}金币${reason ? ` (${reason})` : ''}`,
+      coins: users[userIndex].coins,
+      deductedAmount: amount
+    });
+    
+  } catch (error) {
+    console.error('扣除金币错误:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });

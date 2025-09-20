@@ -116,6 +116,37 @@ export const AuthProvider = ({ children }) => {
     toast.success('已退出登录');
   };
 
+  // 获取用户金币余额
+  const fetchCoins = async () => {
+    try {
+      const response = await axios.get('/api/auth/coins');
+      if (response.data.success) {
+        updateUser({ coins: response.data.coins });
+        return response.data.coins;
+      }
+    } catch (error) {
+      console.error('获取金币余额失败:', error);
+    }
+    return user?.coins || 0;
+  };
+
+  // 金币充值
+  const rechargeCoins = async (amount) => {
+    try {
+      const response = await axios.post('/api/auth/recharge', { amount });
+      if (response.data.success) {
+        updateUser({ coins: response.data.coins });
+        toast.success(response.data.message);
+        return { success: true, coins: response.data.coins };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || '充值失败';
+      toast.error(message);
+      return { success: false, message };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -124,6 +155,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     saveUserSettings,
+    fetchCoins,
+    rechargeCoins,
     loading
   };
 

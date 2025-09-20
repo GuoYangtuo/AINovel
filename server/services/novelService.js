@@ -213,72 +213,13 @@ class HtmlLogger {
   }
 }
 
-// 旧的硬编码人物数据（仅用于向后兼容，新房间应使用模板系统）
-const 人物s = [
-  {
-    "基本信息": "主人公小叶，一个现代都市的高中生，宅男，比较瘦弱，因为意外，唯一的亲人只剩母亲",
-    "性格": "内向，喜欢独处，不善言辞",
-    "背景故事": [
-      "看起来有点高冷，但有时也会内心戏很多",
-      "过去的十几年过着两点一线的普通高中生生活，看起来和别人没什么不一样，在班里没什么存在感",
-      "但有一天睡醒突然莫名其妙觉醒了读心术，能听到别人心里在想什么，他一直隐藏着这个能力，但也因此更对世间冷暖看淡，对人际关系不再抱有期待，看起来更加冷漠孤僻了"
-    ],
-    "人际关系": []
-  },
-  {
-    "基本信息": "小叶的母亲",
-    "性格": "很年轻有活力，又有些幽默和乐观，看起来有点天然",
-    "背景故事": [
-      "过着一个普通的都市家庭主妇的生活"
-    ],
-    "人际关系": []
-  },
-  {
-    "基本信息": "小叶的同桌小七",
-    "性格": "活泼开朗，成绩优异，在班级里很受欢迎",
-    "背景故事": [
-      "对所有人都很友好",
-      "注意到小叶的与众不同，对他产生了好奇",
-      "经常主动找小叶说话，但总是得不到太多回应"
-    ],
-    "人际关系": []
-  },
-  {
-    "基本信息": "神秘的超能力组织的头目",
-    "性格": "神出鬼没，有点喜欢玩弄人心",
-    "背景故事": [
-      "暗中观察着所有超能力者的动向",
-      "拥有强大的精神控制能力",
-      "表面上经营着一家心理咨询诊所作为掩护"
-    ],
-    "人际关系": [
-      "与多个超能力者保持联系，但从不透露自己的身份",
-      "对小叶的能力特别关注，但还未主动接触"
-    ]
-  },
-  {
-    "基本信息": "小叶的班主任大刘",
-    "性格": "严肃认真，对学生要求严格",
-    "背景故事": [
-      "对小叶的冷漠态度感到困惑"
-    ],
-    "人际关系": []
-  },
-  {
-    "基本信息": "小叶的同桌的朋友小晴",
-    "性格": "活泼开朗，成绩优异，在班级里很受欢迎",
-    "背景故事": [
-      "对所有人都很友好",
-      "同样也是超能力者，但和小叶并不相识",
-      "从属于神秘的超能力组织，经常消失一段时间去完成特殊任务"
-    ],
-    "人际关系": []
-  }
-];
 
 // 单个小说房间类
 class NovelRoom {
-  constructor(roomId, title = '未命名小说', templateData = null) {
+  constructor(roomId, title = '未命名小说', templateData) {
+    if (!templateData) {
+      throw new Error('templateData is required to create a room');
+    }
     this.roomId = roomId;
     this.title = title;
     this.createdAt = new Date();
@@ -381,23 +322,13 @@ class NovelRoom {
 
   // 生成初始故事
   async 生成初始故事() {
-    let role, prompt;
-    
-    if (this.templateData && this.templateData.promptTemplate) {
-      // 使用模板数据
-      role = this.templateData.promptTemplate.systemPrompt;
-      prompt = templateService.generateInitialPrompt(this.templateData);
-    } else {
-      // 使用默认提示词（兼容旧代码）
-      role = "你是一个高水平小说作家";
-      prompt = `请根据以下信息写一个小说的开头，直到小叶遇到了人生轨迹转折点，面临关键抉择时停下，并给出几个可能的选项供我选择，以主人公的第一视角叙事，
-人物：${JSON.stringify(人物s)}
-我会给出选择并让你续写。主人公的选择会严重影响他的人生轨迹和整个故事的发展，甚至整个故事的结局和世界的走向都会因为主人公选择的不同而改变，保持一定的叙事节奏，不要提前透露所有世界观设定和人物信息，而是随着故事发展才逐渐揭露信息，选择不同，揭露信息的顺序和程度也不同，故事的发展方向也不同，给出选项即可，无需给出每个选项可能的后续发展
-你的输出格式：
-{小说正文内容}
-["{选项1}","{选项2}","{选项3}"]
-用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
+    if (!this.templateData || !this.templateData.promptTemplate) {
+      throw new Error('模板数据缺失，无法生成故事');
     }
+    
+    const role = this.templateData.promptTemplate.systemPrompt;
+    const prompt = templateService.generateInitialPrompt(this.templateData);
+    
     this.logger.logPrompt(prompt);
 
     try {
@@ -420,33 +351,13 @@ class NovelRoom {
 
   // 继续故事
   async 继续故事(选择的选项) {
-    let role, prompt;
-    
-    if (this.templateData && this.templateData.promptTemplate) {
-      // 使用模板数据
-      role = this.templateData.promptTemplate.systemPrompt;
-      prompt = templateService.generateContinuePrompt(this.templateData, this.novelState.storyHistory);
-    } else {
-      // 使用默认提示词（兼容旧代码）
-      role = "你是一个高水平小说作家";
-      //获取到之前的故事
-      let past_story = ''
-      this.novelState.storyHistory.forEach(element => {
-        past_story += element.story + '\n\n' + '主人公选择了：' + element.winningChoice + '\n\n'
-      }); 
-      prompt = `请根据主人公上一次的抉择，续写小说，直到主人公面临新的抉择时停下。
-一些信息:
-人物：${JSON.stringify(人物s)}
-世界观：暂无
-之前的故事：${past_story}
-
-主人公的选择会严重影响他的人生轨迹和整个故事的发展，甚至整个故事的结局和世界的走向都会因为主人公选择的不同而改变，保持一定的叙事节奏，不要提前透露所有世界观设定和人物信息，而是随着故事发展才逐渐揭露信息，选择不同，揭露信息的顺序和程度也不同，故事的发展方向也不同，给出选项即可，无需给出每个选项可能的后续发展
-你的输出格式：
-{小说正文内容}
-["{选项1}","{选项2}","{选项3}"]
-用生成的内容替换掉上述格式中大括号包含的部分以及大括号，正文部分不要出现中括号，请完全按照格式输出，不要输出任何无关内容`;
+    if (!this.templateData || !this.templateData.promptTemplate) {
+      throw new Error('模板数据缺失，无法继续故事');
     }
-
+    
+    const role = this.templateData.promptTemplate.systemPrompt;
+    const prompt = templateService.generateContinuePrompt(this.templateData, this.novelState.storyHistory, 选择的选项);
+    
     this.logger.logPrompt(prompt);
 
     try {
@@ -517,7 +428,7 @@ class NovelRoom {
   }
 
   // 添加投票
-  addVote(userId, choice) {
+  addVote(userId, choice, coinsSpent = 0) {
     if (!this.novelState.isVoting) {
       this.logger.logWarning('当前不在投票阶段');
       return { success: false, message: '当前不在投票阶段' };
@@ -527,23 +438,37 @@ class NovelRoom {
       return { success: false, message: '无效的选项' };
     }
 
-    // 移除用户之前的投票
-    const previousVote = this.novelState.userVotes[userId];
-    if (previousVote && this.novelState.votes[previousVote]) {
-      this.novelState.votes[previousVote]--;
+    // 验证金币数量
+    if (coinsSpent < 0 || !Number.isInteger(coinsSpent)) {
+      return { success: false, message: '金币数量无效' };
     }
 
+    // 移除用户之前的投票
+    const previousVote = this.novelState.userVotes[userId];
+    if (previousVote && this.novelState.votes[previousVote.choice]) {
+      this.novelState.votes[previousVote.choice] -= previousVote.totalVotes;
+    }
+
+    // 计算总投票数（1票免费 + 金币票数）
+    const totalVotes = 1 + coinsSpent;
+    
     // 添加新投票
-    this.novelState.userVotes[userId] = choice;
-    this.novelState.votes[choice] = (this.novelState.votes[choice] || 0) + 1;
+    this.novelState.userVotes[userId] = {
+      choice,
+      coinsSpent,
+      totalVotes,
+      timestamp: new Date().toISOString()
+    };
+    this.novelState.votes[choice] = (this.novelState.votes[choice] || 0) + totalVotes;
     
     // 记录投票
-    this.logger.logVoting(`用户 ${userId} 投票: ${choice}`);
+    this.logger.logVoting(`用户 ${userId} 投票: ${choice} (花费${coinsSpent}金币，总计${totalVotes}票)`);
 
     return { 
       success: true, 
       votes: this.novelState.votes,
-      message: '投票成功'
+      userVote: this.novelState.userVotes[userId],
+      message: coinsSpent > 0 ? `投票成功！花费${coinsSpent}金币，总计${totalVotes}票` : '投票成功！'
     };
   }
 
@@ -667,6 +592,19 @@ class NovelRoom {
 
     this.logger.logVoting(`投票结果: ${winningChoice} (${maxVotes}票)`);
 
+    // 收集需要扣除金币的用户信息
+    const coinDeductions = [];
+    for (const [userId, userVote] of Object.entries(this.novelState.userVotes)) {
+      if (userVote.coinsSpent > 0) {
+        coinDeductions.push({
+          userId,
+          amount: userVote.coinsSpent,
+          choice: userVote.choice,
+          totalVotes: userVote.totalVotes
+        });
+      }
+    }
+
     try {
       // 广播AI生成状态
       if (this.io) {
@@ -684,6 +622,7 @@ class NovelRoom {
         story: this.novelState.currentStory,
         winningChoice,
         votes: { ...this.novelState.votes },
+        userVotes: { ...this.novelState.userVotes }, // 保存用户投票详情
         discussion: archivedDiscussion, // 添加讨论记录到历史
         timestamp: new Date().toISOString()
       });
@@ -692,6 +631,9 @@ class NovelRoom {
       const processed = await this.调用AI带重试(async () => {
         return await this.继续故事(winningChoice);
       });
+
+      // 故事生成成功后，扣除用户金币
+      await this.processCoinDeductions(coinDeductions);
 
       // 更新状态
       this.novelState.currentStory = processed.story;
@@ -711,7 +653,8 @@ class NovelRoom {
           choices: processed.choices,
           winningChoice,
           votes: this.novelState.votes,
-          storyHistory: this.novelState.storyHistory
+          storyHistory: this.novelState.storyHistory,
+          coinDeductions: coinDeductions // 告知前端哪些用户被扣除了金币
         });
       }
 
@@ -721,7 +664,7 @@ class NovelRoom {
     } catch (error) {
       this.logger.logError(`生成下一段故事失败: ${error.message}`);
       
-      // 如果生成失败，重新开始投票
+      // 如果生成失败，重新开始投票（不扣除金币）
       this.novelState.isVoting = true;
       this.startVotingTimer();
       
@@ -729,6 +672,46 @@ class NovelRoom {
         this.io.to(this.roomId).emit('story_error', {
           message: `故事生成失败: ${error.message}，请重新投票`
         });
+      }
+    }
+  }
+
+  // 处理金币扣除
+  async processCoinDeductions(coinDeductions) {
+    console.log('processCoinDeductions', coinDeductions);
+    
+    for (const deduction of coinDeductions) {
+      try {
+        // 这里应该调用认证服务的扣币接口
+        // 由于我们在同一个服务内，直接调用文件系统
+        const { readUsers, writeUsers } = require('../utils/fileUtils');
+        
+        const users = readUsers();
+        const userIndex = users.findIndex(u => u.id === deduction.userId);
+        
+        if (userIndex !== -1) {
+          const currentCoins = users[userIndex].coins || 0;
+          if (currentCoins >= deduction.amount) {
+            users[userIndex].coins = currentCoins - deduction.amount;
+            users[userIndex].updatedAt = new Date().toISOString();
+            writeUsers(users);
+            
+            this.logger.logVoting(`用户 ${deduction.userId} 扣除 ${deduction.amount} 金币 (投票: ${deduction.choice})`);
+            
+            // 通知前端用户金币变化
+            if (this.io) {
+              this.io.to(deduction.userId).emit('coins_deducted', {
+                amount: deduction.amount,
+                remainingCoins: users[userIndex].coins,
+                reason: `投票消费: ${deduction.choice}`
+              });
+            }
+          } else {
+            this.logger.logWarning(`用户 ${deduction.userId} 金币不足，无法扣除 ${deduction.amount} 金币`);
+          }
+        }
+      } catch (error) {
+        this.logger.logError(`扣除用户 ${deduction.userId} 金币失败: ${error.message}`);
       }
     }
   }
@@ -755,7 +738,11 @@ class NovelRoomManager {
   }
 
   // 创建房间
-  createRoom(roomId, title, templateData = null) {
+  createRoom(roomId, title, templateData) {
+    if (!templateData) {
+      throw new Error('templateData is required to create a room');
+    }
+    
     if (this.rooms.has(roomId)) {
       return this.rooms.get(roomId);
     }
@@ -831,9 +818,7 @@ class NovelRoomManager {
         await room1.initializeNovel(io);
         // 测试房间1创建成功
       } else {
-        // 测试模板未找到，创建默认房间1
-        const room1 = this.createRoom('room1', '小叶的超能力觉醒之路');
-        await room1.initializeNovel(io);
+        console.warn('测试模板未找到，跳过创建房间1');
       }
       
       // 创建测试房间2，使用奇幻模板
@@ -843,9 +828,7 @@ class NovelRoomManager {
         await room2.initializeNovel(io);
         // 测试房间2创建成功
       } else {
-        // 奇幻模板未找到，创建默认房间2
-        const room2 = this.createRoom('room2', '魔法学院的奇幻冒险');
-        await room2.initializeNovel(io);
+        console.warn('奇幻模板未找到，跳过创建房间2');
       }
       
       // 测试房间初始化完成
@@ -865,9 +848,9 @@ module.exports = {
     const room = novelRoomManager.getRoom(roomId);
     return room ? room.getNovelState() : null;
   },
-  addVote: (userId, choice, roomId = 'room1') => {
+  addVote: (userId, choice, roomId = 'room1', coinsSpent = 0) => {
     const room = novelRoomManager.getRoom(roomId);
-    return room ? room.addVote(userId, choice) : { success: false, message: '房间不存在' };
+    return room ? room.addVote(userId, choice, coinsSpent) : { success: false, message: '房间不存在' };
   },
   
   // 讨论区相关接口

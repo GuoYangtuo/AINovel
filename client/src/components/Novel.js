@@ -36,7 +36,7 @@ import VotingPanel from './VotingPanel';
 import StoryDisplay from './StoryDisplay';
 
 const Novel = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, fetchCoins } = useAuth();
   const { connected, novelState, currentRoomId, isJoiningRoom, joinRoom } = useSocket();
   const [logoutDialog, setLogoutDialog] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -268,6 +268,7 @@ const Novel = () => {
             formatTime={formatTime}
             connected={connected}
             discussion={novelState.discussion || { messages: [], isActive: false }}
+            userCoins={user?.coins || 0}
           />
         )}
       </Container>

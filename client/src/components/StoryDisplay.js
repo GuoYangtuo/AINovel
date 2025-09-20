@@ -33,7 +33,8 @@ const StoryDisplay = ({
   totalVotes,
   formatTime,
   connected,
-  discussion = { messages: [], isActive: false }
+  discussion = { messages: [], isActive: false },
+  userCoins = 0
 }) => {
   // 将故事文本分段处理
   const formatStoryText = (text) => {
@@ -345,6 +346,7 @@ const StoryDisplay = ({
                   formatTime={formatTime}
                   totalVotes={totalVotes}
                   discussion={discussion}
+                  userCoins={userCoins}
                 />
               )}
             </Box>
