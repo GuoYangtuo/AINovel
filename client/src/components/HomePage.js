@@ -7,52 +7,34 @@ import {
   Typography,
   Button,
   Box,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Grid,
   Paper,
   Chip,
   CircularProgress,
   Alert,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
   TextField,
   FormControl,
   InputLabel,
   Select
 } from '@mui/material';
 import {
-  ExitToApp,
-  Person,
   PlayArrow,
   PeopleAlt,
   Schedule,
-  BookmarkBorder,
-  Add,
-  Settings,
-  MonetizationOn
+  BookmarkBorder
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import RechargeDialog from './RechargeDialog';
+import Navbar from './Navbar';
 import axios from 'axios';
 
 const HomePage = () => {
-  const { user, logout, fetchCoins, rechargeCoins } = useAuth();
+  const { user, fetchCoins } = useAuth();
   const navigate = useNavigate();
   const [novels, setNovels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [logoutDialog, setLogoutDialog] = useState(false);
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [rechargeDialog, setRechargeDialog] = useState(false);
-  const [rechargeAmount, setRechargeAmount] = useState('');
-  const [rechargeLoading, setRechargeLoading] = useState(false);
 
   // 获取小说列表
   useEffect(() => {
@@ -88,49 +70,18 @@ const HomePage = () => {
     }
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    setLogoutDialog(false);
-  };
-
-  const handleUserMenuOpen = (event) => {
-    setUserMenuAnchor(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
-  };
-
   const handleCreateRoom = () => {
-    handleUserMenuClose();
     navigate('/create-room');
   };
 
   const handleGoToSettings = () => {
-    handleUserMenuClose();
     navigate('/settings');
   };
 
   const handleOpenRecharge = () => {
-    handleUserMenuClose();
     setRechargeDialog(true);
   };
 
-  const handleRecharge = async () => {
-    const amount = parseInt(rechargeAmount);
-    if (!amount || amount <= 0) {
-      return;
-    }
-
-    setRechargeLoading(true);
-    const result = await rechargeCoins(amount);
-    setRechargeLoading(false);
-
-    if (result.success) {
-      setRechargeDialog(false);
-      setRechargeAmount('');
-    }
-  };
 
   const joinNovel = (roomId) => {
     navigate(`/novel/${roomId}`);
@@ -151,47 +102,13 @@ const HomePage = () => {
 
   return (
     <>
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-        }}
-      >
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            选择之书 - 选择你想要体验的故事
-          </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Chip
-              icon={<Person />}
-              label={user?.username}
-              color="primary"
-              variant="outlined"
-              onClick={handleUserMenuOpen}
-              sx={{ 
-                color: 'white', 
-                borderColor: 'rgba(255, 255, 255, 0.5)',
-                cursor: 'pointer',
-                '&:hover': {
-                  borderColor: 'rgba(255, 255, 255, 0.8)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-            />
-            
-            <IconButton
-              color="inherit"
-              onClick={() => setLogoutDialog(true)}
-              sx={{ color: 'white' }}
-            >
-              <ExitToApp />
-            </IconButton>
-          </Box>
-        </Toolbar>
-      </AppBar>
+      <Navbar 
+        title="选择之书 - 选择你想要体验的故事"
+        showUserMenu={true}
+        onCreateRoom={handleCreateRoom}
+        onGoToSettings={handleGoToSettings}
+        onOpenRecharge={handleOpenRecharge}
+      />
 
       <Container 
         maxWidth="lg" 
@@ -332,161 +249,11 @@ const HomePage = () => {
         </Paper>
       </Container>
 
-      {/* 用户下拉菜单 */}
-      <Menu
-        anchorEl={userMenuAnchor}
-        open={Boolean(userMenuAnchor)}
-        onClose={handleUserMenuClose}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            color: 'white',
-            minWidth: 200
-          }
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-      >
-        <MenuItem disabled sx={{ color: 'white', opacity: 1 }}>
-          <ListItemIcon>
-            <MonetizationOn sx={{ color: '#ffd700' }} />
-          </ListItemIcon>
-          <ListItemText 
-            primary={`金币余额: ${user?.coins || 0}`} 
-            sx={{ '& .MuiListItemText-primary': { fontWeight: 'bold' } }}
-          />
-        </MenuItem>
-        <MenuItem onClick={handleOpenRecharge}>
-          <ListItemIcon>
-            <MonetizationOn sx={{ color: 'white' }} />
-          </ListItemIcon>
-          <ListItemText primary="充值金币" />
-        </MenuItem>
-        <MenuItem onClick={handleCreateRoom}>
-          <ListItemIcon>
-            <Add sx={{ color: 'white' }} />
-          </ListItemIcon>
-          <ListItemText primary="创建房间" />
-        </MenuItem>
-        <MenuItem onClick={handleGoToSettings}>
-          <ListItemIcon>
-            <Settings sx={{ color: 'white' }} />
-          </ListItemIcon>
-          <ListItemText primary="用户设置" />
-        </MenuItem>
-      </Menu>
-
-      {/* 退出确认对话框 */}
-      <Dialog
-        open={logoutDialog}
-        onClose={() => setLogoutDialog(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-          }
-        }}
-      >
-        <DialogTitle>确认退出</DialogTitle>
-        <DialogContent>
-          <Typography>
-            你确定要退出登录吗？
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoutDialog(false)}>
-            取消
-          </Button>
-          <Button onClick={handleLogout} color="primary" variant="contained">
-            确认退出
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* 充值对话框 */}
-      <Dialog
+      <RechargeDialog
         open={rechargeDialog}
-        onClose={() => !rechargeLoading && setRechargeDialog(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            minWidth: '400px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <MonetizationOn sx={{ color: '#ffd700' }} />
-          金币充值
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            当前金币余额: {user?.coins || 0}
-          </Typography>
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              选择充值金额:
-            </Typography>
-            <Grid container spacing={1} sx={{ mb: 2 }}>
-              {[100, 500, 1000, 2000].map((amount) => (
-                <Grid item xs={6} key={amount}>
-                  <Button
-                    variant={rechargeAmount === amount.toString() ? "contained" : "outlined"}
-                    fullWidth
-                    onClick={() => setRechargeAmount(amount.toString())}
-                    sx={{ py: 1 }}
-                  >
-                    {amount} 金币
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          <TextField
-            fullWidth
-            label="自定义充值金额"
-            value={rechargeAmount}
-            onChange={(e) => setRechargeAmount(e.target.value)}
-            type="number"
-            inputProps={{ min: 1, max: 10000 }}
-            variant="outlined"
-            disabled={rechargeLoading}
-          />
-          
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            * 最小充值1金币，最大充值10000金币
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setRechargeDialog(false)}
-            disabled={rechargeLoading}
-          >
-            取消
-          </Button>
-          <Button 
-            onClick={handleRecharge} 
-            color="primary" 
-            variant="contained"
-            disabled={rechargeLoading || !rechargeAmount || parseInt(rechargeAmount) <= 0}
-            startIcon={rechargeLoading ? <CircularProgress size={16} /> : <MonetizationOn />}
-          >
-            {rechargeLoading ? '充值中...' : `充值 ${rechargeAmount || 0} 金币`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onClose={() => setRechargeDialog(false)}
+      />
     </>
   );
 };

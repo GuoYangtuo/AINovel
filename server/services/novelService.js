@@ -443,32 +443,38 @@ class NovelRoom {
       return { success: false, message: '金币数量无效' };
     }
 
-    // 移除用户之前的投票
+    // 移除用户之前的投票（如果有的话）
     const previousVote = this.novelState.userVotes[userId];
     if (previousVote && this.novelState.votes[previousVote.choice]) {
       this.novelState.votes[previousVote.choice] -= previousVote.totalVotes;
     }
 
-    // 计算总投票数（1票免费 + 金币票数）
+    // 计算总投票数：默认1票 + 金币票数
     const totalVotes = 1 + coinsSpent;
     
-    // 添加新投票
+    // 记录新投票
     this.novelState.userVotes[userId] = {
       choice,
       coinsSpent,
       totalVotes,
       timestamp: new Date().toISOString()
     };
+    
+    // 更新选项的总票数
     this.novelState.votes[choice] = (this.novelState.votes[choice] || 0) + totalVotes;
     
-    // 记录投票
-    this.logger.logVoting(`用户 ${userId} 投票: ${choice} (花费${coinsSpent}金币，总计${totalVotes}票)`);
+    // 记录投票日志
+    this.logger.logVoting(`用户 ${userId} 投票: ${choice} (使用${coinsSpent}金币，总计${totalVotes}票)`);
+
+    const message = coinsSpent > 0 
+      ? `投票成功！使用${coinsSpent}金币，总计${totalVotes}票` 
+      : '投票成功！使用基础投票权（1票）';
 
     return { 
       success: true, 
       votes: this.novelState.votes,
       userVote: this.novelState.userVotes[userId],
-      message: coinsSpent > 0 ? `投票成功！花费${coinsSpent}金币，总计${totalVotes}票` : '投票成功！'
+      message
     };
   }
 
@@ -678,8 +684,6 @@ class NovelRoom {
 
   // 处理金币扣除
   async processCoinDeductions(coinDeductions) {
-    console.log('processCoinDeductions', coinDeductions);
-    
     for (const deduction of coinDeductions) {
       try {
         // 这里应该调用认证服务的扣币接口

@@ -81,26 +81,13 @@ const StoryDisplay = ({
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <EmojiEvents sx={{ mr: 1, color: 'success.main' }} />
           <Typography variant="h6" color="success.main">
-            投票结果
+            投票结果：{winningChoice}
           </Typography>
           <Chip 
             size="small" 
             label={new Date(timestamp).toLocaleString('zh-CN')}
             icon={<Schedule />}
             sx={{ ml: 'auto' }}
-          />
-        </Box>
-        
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            <strong>获胜选项：</strong>
-          </Typography>
-          <Chip
-            icon={<EmojiEvents />}
-            label={winningChoice}
-            color="success"
-            variant="filled"
-            sx={{ mb: 2 }}
           />
         </Box>
 

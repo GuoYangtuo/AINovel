@@ -7,9 +7,6 @@ import {
   Typography,
   Button,
   Box,
-  AppBar,
-  Toolbar,
-  IconButton,
   TextField,
   Paper,
   Avatar,
@@ -21,13 +18,13 @@ import {
   Chip
 } from '@mui/material';
 import {
-  ArrowBack,
   Person,
   Save,
   Palette
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, themeOptions } from '../contexts/ThemeContext';
+import Navbar from './Navbar';
 import toast from 'react-hot-toast';
 
 const UserSettings = () => {
@@ -97,27 +94,11 @@ const UserSettings = () => {
 
   return (
     <>
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/')}
-            sx={{ color: 'white', mr: 2 }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            用户设置
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <Navbar
+        title="用户设置"
+        showBackButton={true}
+        showUserMenu={false}
+      />
 
       <Container maxWidth="md" sx={{ 
       py: 3, 

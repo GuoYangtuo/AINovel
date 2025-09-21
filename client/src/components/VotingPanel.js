@@ -23,7 +23,9 @@ import {
   MonetizationOn
 } from '@mui/icons-material';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 import DiscussionPanel from './DiscussionPanel';
+import RechargeDialog from './RechargeDialog';
 import toast from 'react-hot-toast';
 
 const VotingPanel = ({ 
@@ -39,9 +41,41 @@ const VotingPanel = ({
   userCoins = 0 
 }) => {
   const { vote } = useSocket();
+  const { user } = useAuth();
   const [voteDialog, setVoteDialog] = useState(false);
   const [selectedChoice, setSelectedChoice] = useState('');
   const [coinsToSpend, setCoinsToSpend] = useState(0);
+  const [rechargeDialog, setRechargeDialog] = useState(false);
+  const [insufficientAmount, setInsufficientAmount] = useState(0);
+  
+  // 监听金币余额变化，充值成功后重新打开投票弹窗
+  const previousCoins = React.useRef(userCoins);
+  React.useEffect(() => {
+    if (rechargeDialog && userCoins > previousCoins.current) {
+      // 金币增加了，说明充值成功
+      setRechargeDialog(false);
+      setInsufficientAmount(0);
+      // 重新打开投票弹窗
+      setTimeout(() => setVoteDialog(true), 100);
+    }
+    previousCoins.current = userCoins;
+  }, [userCoins, rechargeDialog]);
+
+  const handleFreeVote = (choice) => {
+    if (!isVoting) {
+      console.log(isVoting);
+      toast.error('当前不在投票阶段');
+      return;
+    }
+    
+    if (disabled) {
+      toast.error('连接已断开，无法投票');
+      return;
+    }
+
+    // 免费投票
+    vote(choice, 0);
+  };
 
   const handleVote = (choice, spendCoins = 0) => {
     if (!isVoting) {
@@ -55,22 +89,35 @@ const VotingPanel = ({
       return;
     }
 
-    if (spendCoins > 0) {
-      // 使用金币投票
-      vote(choice, spendCoins);
-    } else {
-      // 免费投票
-      vote(choice);
-    }
+    // 使用金币投票
+    vote(choice, spendCoins);
   };
 
-  const handleOpenVoteDialog = (choice) => {
+  const handleOpenVoteDialog = (choice, event) => {
+    // 阻止事件冒泡，防止触发卡片的点击事件
+    event.stopPropagation();
     setSelectedChoice(choice);
-    setCoinsToSpend(0);
+    
+    // 如果用户已经投过票，显示当前已花费的金币数量
+    // 如果用户还未投票，从0开始
+    if (userVote && userVote.choice === choice) {
+      setCoinsToSpend(userVote.coinsSpent || 0);
+    } else {
+      setCoinsToSpend(0);
+    }
     setVoteDialog(true);
   };
 
   const handleConfirmVote = () => {
+    // 检查金币是否足够
+    if (coinsToSpend > userCoins) {
+      const needed = coinsToSpend - userCoins;
+      setInsufficientAmount(needed);
+      setVoteDialog(false);
+      setRechargeDialog(true);
+      return;
+    }
+    
     handleVote(selectedChoice, coinsToSpend);
     setVoteDialog(false);
   };
@@ -175,7 +222,7 @@ const VotingPanel = ({
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                   } : {}
                 }}
-                onClick={() => isVoting && handleOpenVoteDialog(choice)}
+                onClick={() => isVoting && handleFreeVote(choice)}
               >
                 {/* 进度条背景 */}
                 <Box
@@ -238,6 +285,7 @@ const VotingPanel = ({
                         size="small"
                         variant="outlined"
                         disabled={disabled}
+                        onClick={(e) => handleOpenVoteDialog(choice, e)}
                         sx={{ 
                           minWidth: 'auto',
                           px: 2,
@@ -254,6 +302,7 @@ const VotingPanel = ({
                         size="small"
                         variant="contained"
                         disabled={disabled}
+                        onClick={(e) => handleOpenVoteDialog(choice, e)}
                         sx={{ 
                           minWidth: 'auto',
                           px: 2,
@@ -261,7 +310,7 @@ const VotingPanel = ({
                         }}
                         startIcon={<MonetizationOn />}
                       >
-                        追加投票
+                        调整投票
                       </Button>
                     )}
                   </Box>
@@ -342,7 +391,7 @@ const VotingPanel = ({
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <HowToVote color="primary" />
-          投票选择
+          {userVote?.choice === selectedChoice ? '调整投票' : '投票设置'}
         </DialogTitle>
         <DialogContent>
           <Typography variant="h6" sx={{ mb: 2 }}>
@@ -353,9 +402,26 @@ const VotingPanel = ({
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               当前金币余额: {userCoins}
             </Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              每1金币 = 1额外投票（免费投票1票 + 金币票数）
-            </Typography>
+            {userVote?.choice === selectedChoice ? (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  你已经对此选项投过票，当前投票详情：
+                </Typography>
+                <Typography variant="body2" color="primary.main">
+                  • 总投票数: {userVote.totalVotes}票
+                </Typography>
+                <Typography variant="body2" color="warning.main">
+                  • 已花费金币: {userVote.coinsSpent || 0}金币
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  可以调整金币数量来改变投票权重
+                </Typography>
+              </Box>
+            ) : (
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                基础投票：1票（免费）+ 金币投票：每1金币 = 1额外票
+              </Typography>
+            )}
           </Box>
 
           <Box sx={{ mb: 3 }}>
@@ -366,12 +432,12 @@ const VotingPanel = ({
               value={coinsToSpend}
               onChange={(e, newValue) => setCoinsToSpend(newValue)}
               min={0}
-              max={Math.min(userCoins, 100)}
+              max={50}
               marks={[
                 { value: 0, label: '0' },
-                { value: Math.min(Math.floor(userCoins / 4), 25), label: `${Math.min(Math.floor(userCoins / 4), 25)}` },
-                { value: Math.min(Math.floor(userCoins / 2), 50), label: `${Math.min(Math.floor(userCoins / 2), 50)}` },
-                { value: Math.min(userCoins, 100), label: `${Math.min(userCoins, 100)}` }
+                { value: 10, label: '10' },
+                { value: 25, label: '25' },
+                { value: 50, label: '50' }
               ]}
               valueLabelDisplay="on"
               sx={{ mb: 2 }}
@@ -382,11 +448,11 @@ const VotingPanel = ({
               label="自定义金币数量"
               value={coinsToSpend}
               onChange={(e) => {
-                const value = Math.max(0, Math.min(parseInt(e.target.value) || 0, userCoins));
+                const value = Math.max(0, parseInt(e.target.value) || 0);
                 setCoinsToSpend(value);
               }}
               type="number"
-              inputProps={{ min: 0, max: userCoins }}
+              inputProps={{ min: 0 }}
               variant="outlined"
               sx={{ mb: 2 }}
             />
@@ -396,18 +462,25 @@ const VotingPanel = ({
             <Typography variant="body2" sx={{ mb: 1 }}>
               <strong>投票汇总:</strong>
             </Typography>
-            <Typography variant="body2">
-              • 免费投票: 1票
-            </Typography>
-            <Typography variant="body2">
-              • 金币投票: {coinsToSpend}票
-            </Typography>
-            <Typography variant="h6" color="primary.main" sx={{ mt: 1 }}>
-              总计: {1 + coinsToSpend}票
-            </Typography>
+            <>
+              <Typography variant="body2">
+                • 基础投票: 1票（免费）
+              </Typography>
+              <Typography variant="body2">
+                • 金币投票: {coinsToSpend}票
+              </Typography>
+              <Typography variant="h6" color="primary.main" sx={{ mt: 1 }}>
+                总计: {1 + coinsToSpend}票
+              </Typography>
+            </>
             {coinsToSpend > 0 && (
               <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 1 }}>
                 * 金币将在下一段故事生成后扣除
+              </Typography>
+            )}
+            {coinsToSpend > userCoins && (
+              <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 1 }}>
+                ⚠️ 金币不足！还需要 {coinsToSpend - userCoins} 金币
               </Typography>
             )}
           </Paper>
@@ -422,10 +495,18 @@ const VotingPanel = ({
             variant="contained"
             startIcon={<MonetizationOn />}
           >
-            {coinsToSpend > 0 ? `投票 (消费${coinsToSpend}金币)` : '免费投票'}
+            {coinsToSpend > 0 ? `确认投票 (消费${coinsToSpend}金币)` : '确认投票（免费）'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 充值对话框 */}
+      <RechargeDialog
+        open={rechargeDialog}
+        onClose={() => setRechargeDialog(false)}
+        autoFillAmount={insufficientAmount > 0 ? insufficientAmount : null}
+        title={insufficientAmount > 0 ? "金币不足，需要充值" : "金币充值"}
+      />
     </Box>
   );
 };

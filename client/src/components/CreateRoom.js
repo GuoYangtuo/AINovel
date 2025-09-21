@@ -8,9 +8,6 @@ import {
   TextField,
   Button,
   Box,
-  AppBar,
-  Toolbar,
-  IconButton,
   Grid,
   FormControl,
   InputLabel,
@@ -31,10 +28,10 @@ import {
   CircularProgress,
   Divider,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  IconButton
 } from '@mui/material';
 import {
-  ArrowBack,
   Add,
   Delete,
   ExpandMore,
@@ -45,6 +42,7 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import Navbar from './Navbar';
 
 const CreateRoom = () => {
   const navigate = useNavigate();
@@ -84,7 +82,7 @@ const CreateRoom = () => {
       formatInstructions: '输出格式说明：故事正文在前，选项数组在后，选项用JSON数组格式，不要包含任何其他内容'
     },
     settings: {
-      votingDuration: 60000,
+      votingDuration: 600000,
       maxChoices: 3,
       minChoices: 2,
       storyLength: 'medium',
@@ -321,36 +319,29 @@ const CreateRoom = () => {
 
   return (
     <>
-      <AppBar position="fixed" sx={{ bgcolor: 'primary.main' }}>
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/')}
-            sx={{ mr: 2 }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            创建新房间
-          </Typography>
-          <Button
-            color="inherit"
-            onClick={() => previewPrompt(previewType)}
-            startIcon={<Preview />}
-            sx={{ mr: 2 }}
-          >
-            预览提示词
-          </Button>
-          <Button
-            color="inherit"
-            onClick={createRoom}
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : <PlayArrow />}
-          >
-            {loading ? '创建中...' : '创建房间'}
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <Navbar
+        title="创建新房间"
+        showBackButton={true}
+        showUserMenu={false}
+        customStyle={{ bgcolor: 'primary.main' }}
+      >
+        <Button
+          color="inherit"
+          onClick={() => previewPrompt(previewType)}
+          startIcon={<Preview />}
+          sx={{ mr: 2 }}
+        >
+          预览提示词
+        </Button>
+        <Button
+          color="inherit"
+          onClick={createRoom}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={20} /> : <PlayArrow />}
+        >
+          {loading ? '创建中...' : '创建房间'}
+        </Button>
+      </Navbar>
 
       <Container maxWidth="lg" sx={{ 
       py: 3, 

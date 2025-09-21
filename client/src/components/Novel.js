@@ -7,39 +7,20 @@ import {
   Typography,
   Button,
   Box,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   LinearProgress,
   Chip,
   Paper,
-  Grid,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText
+  Grid
 } from '@mui/material';
-import {
-  ExitToApp,
-  Person,
-  ArrowBack,
-  Add,
-  Settings
-} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import VotingPanel from './VotingPanel';
 import StoryDisplay from './StoryDisplay';
+import Navbar from './Navbar';
 
 const Novel = () => {
-  const { user, logout, fetchCoins } = useAuth();
+  const { user } = useAuth();
   const { connected, novelState, currentRoomId, isJoiningRoom, joinRoom } = useSocket();
-  const [logoutDialog, setLogoutDialog] = useState(false);
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const { roomId } = useParams();
   const navigate = useNavigate();
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -124,26 +105,11 @@ const Novel = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleLogout = () => {
-    logout();
-    setLogoutDialog(false);
-  };
-
-  const handleUserMenuOpen = (event) => {
-    setUserMenuAnchor(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
-  };
-
   const handleCreateRoom = () => {
-    handleUserMenuClose();
     navigate('/create-room');
   };
 
   const handleGoToSettings = () => {
-    handleUserMenuClose();
     navigate('/settings');
   };
 
@@ -154,57 +120,19 @@ const Novel = () => {
 
   return (
     <>
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+      <Navbar
+        title={`AI交互小说${currentRoomId ? ` - 房间: ${currentRoomId}` : ''}`}
+        showBackButton={true}
+        onBack={() => navigate('/')}
+        showUserMenu={true}
+        onCreateRoom={handleCreateRoom}
+        onGoToSettings={handleGoToSettings}
+        customStyle={{
           transform: isNavbarVisible ? 'translateY(0)' : 'translateY(-100%)',
           transition: 'transform 0.3s ease-in-out',
           zIndex: 1100
         }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/')}
-            sx={{ color: 'white', mr: 2 }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            AI交互小说 {currentRoomId && `- 房间: ${currentRoomId}`}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Chip
-              icon={<Person />}
-              label={user?.username}
-              color="primary"
-              variant="outlined"
-              onClick={handleUserMenuOpen}
-              sx={{ 
-                color: 'white', 
-                borderColor: 'rgba(255, 255, 255, 0.5)',
-                cursor: 'pointer',
-                '&:hover': {
-                  borderColor: 'rgba(255, 255, 255, 0.8)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-            />
-            
-            <IconButton
-              color="inherit"
-              onClick={() => setLogoutDialog(true)}
-              sx={{ color: 'white' }}
-            >
-              <ExitToApp />
-            </IconButton>
-          </Box>
-        </Toolbar>
-      </AppBar>
+      />
 
       <Container maxWidth="md" sx={{ 
         py: 3, 
@@ -272,71 +200,6 @@ const Novel = () => {
           />
         )}
       </Container>
-
-      {/* 用户下拉菜单 */}
-      <Menu
-        anchorEl={userMenuAnchor}
-        open={Boolean(userMenuAnchor)}
-        onClose={handleUserMenuClose}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            color: 'white',
-            minWidth: 200
-          }
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-      >
-        <MenuItem onClick={handleCreateRoom}>
-          <ListItemIcon>
-            <Add sx={{ color: 'white' }} />
-          </ListItemIcon>
-          <ListItemText primary="创建房间" />
-        </MenuItem>
-        <MenuItem onClick={handleGoToSettings}>
-          <ListItemIcon>
-            <Settings sx={{ color: 'white' }} />
-          </ListItemIcon>
-          <ListItemText primary="用户设置" />
-        </MenuItem>
-      </Menu>
-
-      {/* 退出确认对话框 */}
-      <Dialog
-        open={logoutDialog}
-        onClose={() => setLogoutDialog(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-          }
-        }}
-      >
-        <DialogTitle>确认退出</DialogTitle>
-        <DialogContent>
-          <Typography>
-            你确定要退出登录吗？
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoutDialog(false)}>
-            取消
-          </Button>
-          <Button onClick={handleLogout} color="primary" variant="contained">
-            确认退出
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };
