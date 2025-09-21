@@ -84,7 +84,16 @@ AINovel/
 │   │   ├── auth.js             # 用户认证路由
 │   │   └── templates.js        # 故事模板路由
 │   ├── services/            # 业务逻辑服务
-│   │   ├── novelService.js     # 核心小说生成服务
+│   │   ├── aiService.js         # AI客户端服务 - 与AI API交互
+│   │   ├── novelService/        # 小说生成服务模块
+│   │   │   ├── index.js           # 服务入口文件
+│   │   │   ├── NovelRoom.js       # 小说房间类
+│   │   │   ├── NovelRoomManager.js # 房间管理器
+│   │   │   ├── HtmlLogger.js      # HTML日志记录器
+│   │   │   └── RoomComponents/    # 房间组件
+│   │   │       ├── StoryGenerator.js    # 故事生成器
+│   │   │       ├── VotingManager.js     # 投票管理器
+│   │   │       └── DiscussionManager.js # 讨论管理器
 │   │   └── templateService.js  # 模板管理服务
 │   ├── middleware/          # 中间件
 │   │   └── socketAuth.js       # Socket认证中间件
@@ -145,12 +154,16 @@ npm install
 ```
 
 4. **配置API密钥**
-编辑 `server/services/novelService.js`，设置你的API密钥：
+编辑 `server/services/aiService.js`，设置你的API密钥：
 ```javascript
-this.client = new OpenAI({
-  apiKey: "your_api_key_here",
-  baseURL: "https://api.deepseek.com"  // 或其他兼容的API端点
-});
+constructor(config = {}) {
+  this.config = {
+    apiKey: config.apiKey || "your_api_key_here",
+    baseURL: config.baseURL || "https://api.deepseek.com",  // 或其他兼容的API端点
+    model: config.model || "deepseek-chat",
+    ...config
+  };
+}
 ```
 
 5. **启动后端服务器**
@@ -197,14 +210,20 @@ npm start
 
 ### API配置
 ```javascript
-// server/services/novelService.js
-this.client = new OpenAI({
-  apiKey: "your_api_key_here",
-  baseURL: "https://api.deepseek.com",  // 支持多种AI服务
-  defaultHeaders: {
-    'Content-Type': 'application/json',
-  }
-});
+// server/services/aiService.js
+constructor(config = {}) {
+  this.config = {
+    apiKey: config.apiKey || "your_api_key_here",
+    baseURL: config.baseURL || "https://api.deepseek.com",  // 支持多种AI服务
+    model: config.model || "deepseek-chat",
+    ...config
+  };
+  
+  this.client = new OpenAI({
+    apiKey: this.config.apiKey,
+    baseURL: this.config.baseURL
+  });
+}
 ```
 
 ### JWT密钥配置
@@ -263,8 +282,9 @@ io.on('connection', {
 ### 添加新功能
 1. **后端API**: 在 `server/routes/` 目录下创建新路由文件
 2. **前端组件**: 在 `client/src/components/` 目录下创建新组件
-3. **实时功能**: 在 `novelService.js` 中添加Socket.IO事件处理
-4. **状态管理**: 在相应的Context中添加状态和方法
+3. **实时功能**: 在 `server/services/novelService/` 中添加Socket.IO事件处理
+4. **AI功能**: 在 `server/services/aiService.js` 中扩展AI交互功能
+5. **状态管理**: 在相应的Context中添加状态和方法
 
 ### 自定义故事模板
 ```javascript

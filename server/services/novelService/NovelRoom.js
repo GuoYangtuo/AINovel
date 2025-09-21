@@ -1,5 +1,5 @@
 const HtmlLogger = require('./HtmlLogger');
-const AIClient = require('./aiClient');
+const AIClient = require('../aiService');
 const VotingManager = require('./RoomComponents/VotingManager');
 const DiscussionManager = require('./RoomComponents/DiscussionManager');
 const StoryGenerator = require('./RoomComponents/StoryGenerator');

@@ -131,7 +131,7 @@ module.exports = {
     NovelRoomManager: require('./NovelRoomManager'),
     NovelRoom: require('./NovelRoom'),
     HtmlLogger: require('./HtmlLogger'),
-    AIClient: require('./aiClient')
+    AIClient: require('../aiService')
   }
 };
 
