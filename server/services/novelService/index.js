@@ -36,11 +36,28 @@ module.exports = {
    * @param {string} choice - 选择的选项
    * @param {string} roomId - 房间ID，默认为'room1'
    * @param {number} coinsSpent - 消费的金币数量，默认为0
+   * @param {string} socketId - Socket ID
    * @returns {Object} 投票结果
    */
-  addVote: (userId, choice, roomId = 'room1', coinsSpent = 0) => {
+  addVote: async (userId, choice, roomId = 'room1', coinsSpent = 0, socketId = null) => {
     const room = novelRoomManager.getRoom(roomId);
-    return room ? room.addVote(userId, choice, coinsSpent) : { 
+    return room ? await room.addVote(userId, choice, coinsSpent, socketId) : { 
+      success: false, 
+      message: '房间不存在' 
+    };
+  },
+
+  /**
+   * 添加自定义选项
+   * @param {string} userId - 用户ID
+   * @param {string} customOption - 自定义选项内容
+   * @param {string} roomId - 房间ID
+   * @param {string} socketId - Socket ID
+   * @returns {Object} 添加结果
+   */
+  addCustomOption: async (userId, customOption, roomId, socketId = null) => {
+    const room = novelRoomManager.getRoom(roomId);
+    return room ? await room.addCustomOption(userId, customOption, socketId) : { 
       success: false, 
       message: '房间不存在' 
     };

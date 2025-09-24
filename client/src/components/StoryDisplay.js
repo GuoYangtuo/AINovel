@@ -34,7 +34,10 @@ const StoryDisplay = ({
   formatTime,
   connected,
   discussion = { messages: [], isActive: false },
-  userCoins = 0
+  userCoins = 0,
+  customOptions = [],
+  nextCustomOptionCost = null,
+  availableCustomOptionSlots = 0
 }) => {
   // 将故事文本分段处理
   const formatStoryText = (text) => {
@@ -334,6 +337,9 @@ const StoryDisplay = ({
                   totalVotes={totalVotes}
                   discussion={discussion}
                   userCoins={userCoins}
+                  customOptions={customOptions}
+                  nextCustomOptionCost={nextCustomOptionCost}
+                  availableCustomOptionSlots={availableCustomOptionSlots}
                 />
               )}
             </Box>

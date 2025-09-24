@@ -13,7 +13,8 @@ const {
   leaveRoom,
   getAllRoomsInfo,
   addDiscussionMessage,
-  getDiscussionMessages
+  getDiscussionMessages,
+  addCustomOption
 } = require('./services/novelService');
 const { authenticateSocket } = require('./middleware/socketAuth');
 
@@ -80,7 +81,7 @@ io.on('connection', (socket) => {
   });
   
   // 处理投票
-  socket.on('vote', (data) => {
+  socket.on('vote', async (data) => {
     const { choice, coinsSpent = 0 } = data;
     const userId = socket.userId;
     
@@ -89,7 +90,7 @@ io.on('connection', (socket) => {
       return;
     }
     
-    const result = addVote(userId, choice, currentRoomId, coinsSpent);
+    const result = await addVote(userId, choice, currentRoomId, coinsSpent, socket.id);
     
     if (result.success) {
       // 向房间内所有用户广播投票更新
@@ -129,6 +130,43 @@ io.on('connection', (socket) => {
       io.to(currentRoomId).emit('discussion_message', result.message);
     } else {
       socket.emit('discussion_error', { message: result.message });
+    }
+  });
+
+  // 处理添加自定义选项
+  socket.on('add_custom_option', async (data) => {
+    const { customOption } = data;
+    const userId = socket.userId;
+    
+    if (!currentRoomId) {
+      socket.emit('custom_option_error', { message: '请先加入房间' });
+      return;
+    }
+    
+    if (!customOption || typeof customOption !== 'string' || customOption.trim().length === 0) {
+      socket.emit('custom_option_error', { message: '自定义选项内容不能为空' });
+      return;
+    }
+    
+    const result = await addCustomOption(userId, customOption.trim(), currentRoomId, socket.id);
+    
+    if (result.success) {
+      // 向房间内所有用户广播新的自定义选项
+      io.to(currentRoomId).emit('custom_option_added', {
+        customOption: result.customOption,
+        requiredCoins: result.requiredCoins,
+        message: result.message,
+        votes: getNovelState(currentRoomId)?.votes || {}
+      });
+      
+      // 向添加者发送确认信息
+      socket.emit('custom_option_success', {
+        customOption: result.customOption,
+        requiredCoins: result.requiredCoins,
+        message: result.message
+      });
+    } else {
+      socket.emit('custom_option_error', { message: result.message });
     }
   });
   

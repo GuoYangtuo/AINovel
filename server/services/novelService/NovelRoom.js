@@ -133,10 +133,11 @@ class NovelRoom {
    * @param {string} userId - 用户ID
    * @param {string} choice - 选择的选项
    * @param {number} coinsSpent - 消费的金币数量
+   * @param {string} socketId - Socket ID
    * @returns {Object} 投票结果
    */
-  addVote(userId, choice, coinsSpent = 0) {
-    return this.votingManager.addVote(userId, choice, coinsSpent);
+  async addVote(userId, choice, coinsSpent = 0, socketId = null) {
+    return await this.votingManager.addVote(userId, choice, coinsSpent, socketId);
   }
 
   /**
@@ -179,7 +180,7 @@ class NovelRoom {
    * @param {Object} votingResult - 投票结果
    */
   async processVotingResult(votingResult) {
-    const { needExtension, winningChoice, maxVotes, coinDeductions, votes, userVotes } = votingResult;
+    const { needExtension, winningChoice, maxVotes, votes, userVotes } = votingResult;
 
     // 如果需要延长投票时间
     if (needExtension) {
@@ -214,8 +215,8 @@ class NovelRoom {
       // 生成下一段故事
       const processed = await this.storyGenerator.continueStory(winningChoice);
 
-      // 故事生成成功后，扣除用户金币
-      await this.processCoinDeductions(coinDeductions);
+      // 故事生成成功，清理金币消费记录
+      this.votingManager.clearCoinSpendingRecords();
 
       // 更新房间状态
       this.roomState.currentStory = processed.story;
@@ -231,7 +232,6 @@ class NovelRoom {
           winningChoice,
           votes: this.votingManager.getVotingState().votes,
           storyHistory: this.storyGenerator.getHistory(),
-          coinDeductions: coinDeductions
         });
       }
 
@@ -241,60 +241,35 @@ class NovelRoom {
     } catch (error) {
       this.logger.logError(`生成下一段故事失败: ${error.message}`);
       
-      // 如果生成失败，重新开始投票（不扣除金币）
+      // 如果生成失败，退还已扣除的金币
+      await this.votingManager.refundCoinsOnStoryFailure();
+      
+      // 重新开始投票
       const VOTING_DURATION = this.templateData?.settings?.votingDuration || (1 * 60 * 1000);
       this.votingManager.startVotingTimer(VOTING_DURATION, (result) => {
         return this.processVotingResult(result);
       });
       
       if (this.io) {
-        this.io.to(this.roomId).emit('story_error', {
-          message: `故事生成失败: ${error.message}，请重新投票`
+        this.io.to(this.roomId).emit('story_generation_failed', {
+          message: '生成故事失败，已退还金币，投票重新开始',
+          error: error.message
         });
       }
     }
   }
 
   /**
-   * 处理金币扣除
-   * @param {Array} coinDeductions - 需要扣除金币的用户信息
+   * 添加自定义选项
+   * @param {string} userId - 用户ID
+   * @param {string} customOption - 自定义选项内容
+   * @param {string} socketId - Socket ID
+   * @returns {Object} 添加结果
    */
-  async processCoinDeductions(coinDeductions) {
-    for (const deduction of coinDeductions) {
-      try {
-        // 这里应该调用认证服务的扣币接口
-        // 由于我们在同一个服务内，直接调用文件系统
-        const { readUsers, writeUsers } = require('../../utils/fileUtils');
-        
-        const users = readUsers();
-        const userIndex = users.findIndex(u => u.id === deduction.userId);
-        
-        if (userIndex !== -1) {
-          const currentCoins = users[userIndex].coins || 0;
-          if (currentCoins >= deduction.amount) {
-            users[userIndex].coins = currentCoins - deduction.amount;
-            users[userIndex].updatedAt = new Date().toISOString();
-            writeUsers(users);
-            
-            this.logger.logVoting(`用户 ${deduction.userId} 扣除 ${deduction.amount} 金币 (投票: ${deduction.choice})`);
-            
-            // 通知前端用户金币变化
-            if (this.io) {
-              this.io.to(deduction.userId).emit('coins_deducted', {
-                amount: deduction.amount,
-                remainingCoins: users[userIndex].coins,
-                reason: `投票消费: ${deduction.choice}`
-              });
-            }
-          } else {
-            this.logger.logWarning(`用户 ${deduction.userId} 金币不足，无法扣除 ${deduction.amount} 金币`);
-          }
-        }
-      } catch (error) {
-        this.logger.logError(`扣除用户 ${deduction.userId} 金币失败: ${error.message}`);
-      }
-    }
+  async addCustomOption(userId, customOption, socketId = null) {
+    return await this.votingManager.addCustomOption(userId, customOption, socketId);
   }
+
 
   /**
    * 获取当前小说状态

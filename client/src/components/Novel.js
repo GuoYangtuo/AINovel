@@ -197,6 +197,9 @@ const Novel = () => {
             connected={connected}
             discussion={novelState.discussion || { messages: [], isActive: false }}
             userCoins={user?.coins || 0}
+            customOptions={novelState.customOptions || []}
+            nextCustomOptionCost={novelState.nextCustomOptionCost || null}
+            availableCustomOptionSlots={novelState.availableCustomOptionSlots || 0}
           />
         )}
       </Container>

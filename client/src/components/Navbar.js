@@ -96,9 +96,9 @@ const Navbar = ({
   };
 
   const defaultStyle = {
-    background: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+    background: 'rgba(0,0,0,0)',
+    border: '0px',
+    boxShadow: 'none', // 移除阴影效果
     ...customStyle
   };
 
@@ -166,7 +166,6 @@ const Navbar = ({
           PaperProps={{
             sx: {
               bgcolor: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               color: 'white',
               minWidth: 200
@@ -212,7 +211,6 @@ const Navbar = ({
         PaperProps={{
           sx: {
             bgcolor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
           }
         }}

@@ -125,7 +125,6 @@ const HomePage = () => {
             mb: { xs: 2, sm: 3, md: 4 },
             mx: { xs: 0, sm: 'auto' },
             background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
             borderRadius: 3,
             border: '1px solid rgba(255, 255, 255, 0.2)',
           }}
@@ -167,7 +166,6 @@ const HomePage = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     transition: 'all 0.3s ease',
                     '&:hover': {

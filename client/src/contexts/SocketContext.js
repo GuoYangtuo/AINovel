@@ -123,6 +123,10 @@ export const SocketProvider = ({ children }) => {
         toast.error(data.message);
       });
 
+      newSocket.on('story_generation_failed', (data) => {
+        toast.error(data.message);
+      });
+
       // 讨论区相关事件
       newSocket.on('discussion_message', (message) => {
         console.log('收到讨论区消息:', message);
@@ -154,6 +158,46 @@ export const SocketProvider = ({ children }) => {
           updateUser({ coins: data.remainingCoins });
         }
         toast.info(`金币已扣除：${data.amount}金币 (${data.reason})`);
+      });
+
+      newSocket.on('coins_refunded', (data) => {
+        // 更新用户金币余额
+        if (user) {
+          updateUser({ coins: data.remainingCoins });
+        }
+        toast.success(`金币已退还：${data.amount}金币 (${data.reason})`);
+      });
+
+      // 自定义选项相关事件
+      newSocket.on('custom_option_added', (data) => {
+        console.log('收到自定义选项添加:', data);
+        setNovelState(prev => ({
+          ...prev,
+          customOptions: [...(prev.customOptions || []), data.customOption],
+          votes: data.votes,
+          votingEndTime: prev.votingEndTime // 时间重置在voting_time_reset事件中处理
+        }));
+        toast.success(`新增自定义选项: ${data.customOption.content}`);
+      });
+
+      newSocket.on('custom_option_success', (data) => {
+        toast.success(`成功添加自定义选项！需要${data.requiredCoins}金币`);
+      });
+
+      newSocket.on('custom_option_error', (data) => {
+        toast.error(data.message);
+      });
+
+      newSocket.on('voting_time_reset', (data) => {
+        console.log('投票时间重置:', data);
+        setNovelState(prev => ({
+          ...prev,
+          votingEndTime: data.endTime
+        }));
+        toast(data.message, {
+          icon: '🔄',
+          duration: 4000
+        });
       });
 
       // 房间相关事件
@@ -201,6 +245,12 @@ export const SocketProvider = ({ children }) => {
     }
   }, [socket, connected]);
 
+  const addCustomOption = useCallback((customOption) => {
+    if (socket && connected) {
+      socket.emit('add_custom_option', { customOption });
+    }
+  }, [socket, connected]);
+
   const value = {
     socket,
     connected,
@@ -208,7 +258,8 @@ export const SocketProvider = ({ children }) => {
     currentRoomId,
     isJoiningRoom,
     joinRoom,
-    vote
+    vote,
+    addCustomOption
   };
 
   return (

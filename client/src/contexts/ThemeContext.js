@@ -134,7 +134,6 @@ export const CustomThemeProvider = ({ children }) => {
         styleOverrides: {
           root: {
             background: themeOptions[currentTheme].cardBackground,
-            backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
           },
         },
@@ -143,7 +142,6 @@ export const CustomThemeProvider = ({ children }) => {
         styleOverrides: {
           root: {
             background: themeOptions[currentTheme].cardBackground,
-            backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
           },
         },
@@ -152,7 +150,6 @@ export const CustomThemeProvider = ({ children }) => {
         styleOverrides: {
           root: {
             background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
           },
         },
