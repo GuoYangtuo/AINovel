@@ -137,7 +137,23 @@ class NovelRoom {
    * @returns {Object} 投票结果
    */
   async addVote(userId, choice, coinsSpent = 0, socketId = null) {
-    return await this.votingManager.addVote(userId, choice, coinsSpent, socketId);
+    const result = await this.votingManager.addVote(userId, choice, coinsSpent, socketId);
+    
+    // 【调试】接收到投票后立即结束投票计时器
+    const debugMode = true;
+    if (this.votingManager.votingTimer && debugMode) {
+      this.logger.logInfo('【调试模式】检测到投票，立即结束计时器');
+      
+      // 清除计时器
+      clearTimeout(this.votingManager.votingTimer);
+      this.votingManager.votingTimer = null;
+      
+      // 手动触发投票结束流程
+      const votingResult = this.votingManager.processVotingResult();
+      await this.processVotingResult(votingResult);
+    }
+    
+    return result;
   }
 
   /**

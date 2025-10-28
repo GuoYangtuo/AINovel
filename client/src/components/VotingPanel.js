@@ -749,7 +749,8 @@ const VotingPanel = ({
           sx: {
             bgcolor: 'rgba(255, 255, 255, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
-            minWidth: '400px'
+            minWidth: '400px',
+            backdropFilter: 'blur(10px)'
           }
         }}
       >

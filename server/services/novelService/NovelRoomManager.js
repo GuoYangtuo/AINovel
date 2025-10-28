@@ -122,7 +122,7 @@ class NovelRoomManager {
       }
       
       // 创建测试房间2，使用奇幻模板
-      if (fantasyTemplate) {
+      if (fantasyTemplate && false) {
         const roomData2 = templateService.createRoomFromTemplate(fantasyTemplate);
         const room2 = this.createRoom('room2', '魔法学院的奇幻冒险', roomData2);
         await room2.initializeNovel(io);
