@@ -30,6 +30,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import DiscussionPanel from './DiscussionPanel';
 import RechargeDialog from './RechargeDialog';
+import CountdownTimer from './CountdownTimer';
 import toast from 'react-hot-toast';
 
 const VotingPanel = ({ 
@@ -38,7 +39,7 @@ const VotingPanel = ({
   userVote, 
   isVoting, 
   disabled, 
-  timeRemaining, 
+  votingEndTime, 
   formatTime, 
   totalVotes,
   discussion,
@@ -206,9 +207,13 @@ const VotingPanel = ({
                 alignItems: 'center',
                 minWidth: '80px'
               }}>
-                <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
-                  {formatTime(timeRemaining || 0)}
-                </Typography>
+                <CountdownTimer 
+                  votingEndTime={votingEndTime}
+                  formatTime={formatTime}
+                  variant="h6" 
+                  color="primary.main" 
+                  sx={{ fontWeight: 'bold', lineHeight: 1 }}
+                />
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                   {totalVotes || 0} 票
                 </Typography>

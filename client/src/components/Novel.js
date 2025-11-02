@@ -23,7 +23,6 @@ const Novel = () => {
   const { connected, novelState, currentRoomId, isJoiningRoom, joinRoom } = useSocket();
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const [timeRemaining, setTimeRemaining] = useState(0);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef(null);
@@ -42,20 +41,6 @@ const Novel = () => {
       hasJoinedRoom.current = false;
     }
   }, [connected, roomId, currentRoomId]);
-
-  // 更新倒计时
-  useEffect(() => {
-    if (novelState?.votingEndTime) {
-      const updateTimer = () => {
-        const remaining = Math.max(0, novelState.votingEndTime - Date.now());
-        setTimeRemaining(remaining);
-      };
-
-      updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [novelState?.votingEndTime]);
 
   // 滚动导航栏隐藏/显示效果
   useEffect(() => {
@@ -191,7 +176,7 @@ const Novel = () => {
             userVote={novelState.userVotes?.[user?.id]}
             isVoting={novelState.isVoting}
             isGenerating={novelState.isGenerating}
-            timeRemaining={timeRemaining}
+            votingEndTime={novelState.votingEndTime}
             totalVotes={getTotalVotes()}
             formatTime={formatTime}
             connected={connected}

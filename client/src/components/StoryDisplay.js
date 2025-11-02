@@ -32,7 +32,7 @@ const StoryDisplay = ({
   userVote,
   isVoting,
   isGenerating,
-  timeRemaining,
+  votingEndTime,
   totalVotes,
   formatTime,
   connected,
@@ -548,7 +548,7 @@ const StoryDisplay = ({
                   userVote={userVote}
                   isVoting={isVoting}
                   disabled={!connected || isGenerating}
-                  timeRemaining={timeRemaining}
+                  votingEndTime={votingEndTime}
                   formatTime={formatTime}
                   totalVotes={totalVotes}
                   discussion={discussion}
