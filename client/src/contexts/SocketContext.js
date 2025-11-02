@@ -23,8 +23,13 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (token && user) {
-      // 创建socket连接
-      const newSocket = io('http://localhost:3001', {
+      // 创建socket连接 - 使用当前访问的主机地址
+      // 如果通过内网IP访问前端，socket也会连接到相同的内网IP
+      const hostname = window.location.hostname;
+      const socketUrl = `http://${hostname}:3001`;
+      console.log(`Socket连接地址: ${socketUrl}`);
+      
+      const newSocket = io(socketUrl, {
         auth: {
           token: token
         }

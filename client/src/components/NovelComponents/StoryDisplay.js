@@ -176,7 +176,7 @@ const StoryDisplay = ({
                 display: 'block'
               }}
             />
-            <Box sx={{ p: 1.5, bgcolor: 'rgba(102, 126, 234, 0.1)' }}>
+            {/*<Box sx={{ p: 1.5, bgcolor: 'rgba(102, 126, 234, 0.1)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <ImageIcon sx={{ fontSize: 16, mr: 0.5, color: 'primary.main' }} />
                 <Typography variant="caption" color="primary.main" sx={{ fontWeight: 'bold' }}>
@@ -193,7 +193,7 @@ const StoryDisplay = ({
                   {image.prompt}
                 </Typography>
               )}
-            </Box>
+            </Box>*/}
           </Paper>
         </Grid>
         

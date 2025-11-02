@@ -246,7 +246,7 @@ class StoryGenerator {
     this.logger.logInfo('开始生成图片提示词...');
     
     const systemPrompt = '你是一个专业的文生图提示词生成助手。';
-    const userPrompt = `${story}\n\n以上小说片段，请用一系列图片表达小说的内容。对于每张图片，你需要：
+    const userPrompt = `${story}\n\n以上小说片段需要用ai生成配图，请挑选你认为需要配图的一个或几个关键场景，攥写提示词。对于每张图片，你需要：
 1. 提取对应的故事文段（原文）
 2. 生成该场景的文生图提示词
 

@@ -161,7 +161,7 @@ const AudioPlayer = ({ audioUrl, storyIndex }) => {
     >
       <audio
         ref={audioRef}
-        src={`http://localhost:3001${audioUrl}`}
+        src={`http://${window.location.hostname}:3001${audioUrl}`}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}

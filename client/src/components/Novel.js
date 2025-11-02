@@ -14,8 +14,8 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import VotingPanel from './VotingPanel';
-import StoryDisplay from './StoryDisplay';
+import VotingPanel from './NovelComponents/VotingPanel';
+import StoryDisplay from './NovelComponents/StoryDisplay';
 import Navbar from './Navbar';
 
 const Novel = () => {

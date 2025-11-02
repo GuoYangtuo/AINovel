@@ -26,10 +26,10 @@ import {
   Add,
   Edit
 } from '@mui/icons-material';
-import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { useAuth } from '../../contexts/AuthContext';
 import DiscussionPanel from './DiscussionPanel';
-import RechargeDialog from './RechargeDialog';
+import RechargeDialog from '../RechargeDialog';
 import CountdownTimer from './CountdownTimer';
 import toast from 'react-hot-toast';
 

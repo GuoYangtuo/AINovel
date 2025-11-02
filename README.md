@@ -400,3 +400,6 @@ CMD ["npm", "start"]
 **享受创造属于你们的独特故事！** ✨
 
 如有问题或建议，请通过GitHub Issues联系我们。
+
+如需关闭测试模式：修改三处if else
+如需部署：修改两处getlocalip

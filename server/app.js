@@ -4,6 +4,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
 const authRoutes = require('./routes/auth');
 const templateRoutes = require('./routes/templates');
 const ttsService = require('./services/ttsService');
@@ -21,11 +22,28 @@ const {
 } = require('./services/novelService');
 const { authenticateSocket } = require('./middleware/socketAuth');
 
+// 获取本机内网IP地址
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      // 跳过内部（即非局域网）和非IPv4地址
+      if (iface.netmask === '255.255.0.0') {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1'; // 如果没有找到内网IP，返回本地回环地址
+}
+
+const localIP = getLocalIP();
+console.log(`服务器本机内网IP地址: ${localIP}`);
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: [`http://localhost:3000`, `http://${localIP}:3000`],
     methods: ["GET", "POST"]
   }
 });

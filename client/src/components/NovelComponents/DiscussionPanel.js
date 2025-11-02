@@ -18,8 +18,8 @@ import {
   Chat,
   Person
 } from '@mui/icons-material';
-import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DiscussionPanel = ({ 
   discussion = { messages: [], isActive: false }, 
