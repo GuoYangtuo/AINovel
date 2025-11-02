@@ -1,9 +1,12 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const templateRoutes = require('./routes/templates');
+const ttsService = require('./services/ttsService');
 const { 
   initializeNovel, 
   getNovelState, 
@@ -31,6 +34,9 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 
+// 静态文件服务 - 提供音频文件访问
+app.use('/audio', express.static(path.join(__dirname, 'public/audio')));
+
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
@@ -42,6 +48,44 @@ app.get('/api/novels', (req, res) => {
     res.json({ success: true, novels });
   } catch (error) {
     console.error('获取小说列表失败:', error);
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
+
+// TTS 服务状态检查API
+app.get('/api/tts/status', async (req, res) => {
+  try {
+    const status = await ttsService.checkHealth();
+    res.json({ success: true, ...status });
+  } catch (error) {
+    console.error('检查TTS服务状态失败:', error);
+    res.status(500).json({ 
+      success: false, 
+      status: 'error',
+      message: error.message 
+    });
+  }
+});
+
+// TTS 配置API
+app.get('/api/tts/config', (req, res) => {
+  try {
+    const config = ttsService.getConfig();
+    res.json({ success: true, config });
+  } catch (error) {
+    console.error('获取TTS配置失败:', error);
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
+
+// 更新TTS配置API
+app.post('/api/tts/config', (req, res) => {
+  try {
+    const newConfig = req.body;
+    ttsService.updateConfig(newConfig);
+    res.json({ success: true, message: '配置已更新', config: ttsService.getConfig() });
+  } catch (error) {
+    console.error('更新TTS配置失败:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

@@ -3,13 +3,14 @@ const AIClient = require('../aiService');
 const VotingManager = require('./RoomComponents/VotingManager');
 const DiscussionManager = require('./RoomComponents/DiscussionManager');
 const StoryGenerator = require('./RoomComponents/StoryGenerator');
+const RoomDataManager = require('./RoomDataManager');
 
 /**
  * 单个小说房间类
  * 管理单个房间的基本状态，协调各个组件的工作
  */
 class NovelRoom {
-  constructor(roomId, title = '未命名小说', templateData) {
+  constructor(roomId, title = '未命名小说', templateData, dataManager = null) {
     if (!templateData) {
       throw new Error('templateData is required to create a room');
     }
@@ -27,10 +28,14 @@ class NovelRoom {
     this.discussionManager = new DiscussionManager(roomId, this.logger);
     this.storyGenerator = new StoryGenerator(roomId, templateData, this.logger, this.aiClient);
     
+    // 数据持久化管理器
+    this.dataManager = dataManager || new RoomDataManager();
+    
     // 简化的房间状态，主要状态由各组件管理
     this.roomState = {
       currentStory: '',
-      isActive: false
+      isActive: false,
+      currentImages: [] // 当前故事的图片列表
     };
     
     this.io = null;
@@ -63,6 +68,60 @@ class NovelRoom {
   }
 
   /**
+   * 保存房间数据到文件
+   */
+  saveRoomData() {
+    try {
+      const roomData = this.dataManager.exportRoomData(this);
+      this.dataManager.saveRoomData(this.roomId, roomData);
+      this.logger.logInfo(`房间 ${this.roomId} 数据已保存`);
+    } catch (error) {
+      this.logger.logError(`保存房间 ${this.roomId} 数据失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 从保存的数据中恢复房间状态
+   * @param {Object} savedData - 保存的房间数据
+   */
+  restoreFromSavedData(savedData) {
+    try {
+      // 恢复房间基本信息
+      this.title = savedData.title || this.title;
+      this.createdAt = savedData.createdAt ? new Date(savedData.createdAt) : this.createdAt;
+      
+      // 恢复房间状态
+      this.roomState.currentStory = savedData.currentStory || '';
+      this.roomState.currentAudioUrl = savedData.currentAudioUrl || null;
+      this.roomState.isActive = savedData.isActive || false;
+      this.roomState.currentImages = savedData.currentImages || [];
+      
+      // 恢复故事历史
+      if (savedData.storyHistory && Array.isArray(savedData.storyHistory)) {
+        this.storyGenerator.storyHistory = savedData.storyHistory;
+      }
+      
+      // 恢复投票状态
+      if (savedData.votingState) {
+        this.votingManager.votingState = {
+          ...this.votingManager.votingState,
+          ...savedData.votingState
+        };
+      }
+      
+      // 恢复讨论区状态
+      if (savedData.discussionState) {
+        this.discussionManager.discussionState.messages = savedData.discussionState.messages || [];
+        this.discussionManager.discussionState.isActive = savedData.discussionState.isActive || false;
+      }
+      
+      this.logger.logSuccess(`房间 ${this.roomId} 状态已从保存的数据中恢复`);
+    } catch (error) {
+      this.logger.logError(`恢复房间 ${this.roomId} 状态失败: ${error.message}`);
+    }
+  }
+
+  /**
    * 获取房间信息
    * @returns {Object} 房间基本信息
    */
@@ -88,13 +147,57 @@ class NovelRoom {
     try {
       this.logger.logInfo(`正在为房间 ${this.roomId} 生成初始故事...`);
       
-      // 使用故事生成器生成初始故事
-      const processed = await this.storyGenerator.generateInitialStory();
+      // 创建音频准备就绪的回调函数
+      const onAudioReady = (audioUrl) => {
+        this.roomState.currentAudioUrl = audioUrl;
+        this.logger.logSuccess(`房间 ${this.roomId} 音频已准备好: ${audioUrl}`);
+        
+        // 广播音频URL更新
+        if (this.io) {
+          this.io.to(this.roomId).emit('audio_ready', {
+            audioUrl: audioUrl,
+            storyIndex: this.storyGenerator.getHistory().length + 1
+          });
+        }
+        
+        // 音频生成后保存数据
+        this.saveRoomData();
+      };
       
-      this.logger.logSuccess(`房间 ${this.roomId} 初始故事生成完成`);
+      // 创建图片准备就绪的回调函数
+      const onImageReady = (imageData) => {
+        this.logger.logSuccess(`房间 ${this.roomId} 图片已准备好: ${imageData.index + 1}/${imageData.total}`);
+        
+        // 添加到当前图片列表
+        const imageInfo = {
+          index: imageData.index,
+          imageUrl: imageData.imageUrl,
+          prompt: imageData.prompt,
+          paragraph: imageData.paragraph || '', // 对应的文段
+          timestamp: new Date().toISOString()
+        };
+        
+        this.roomState.currentImages.push(imageInfo);
+        
+        // 广播新图片到前端
+        if (this.io) {
+          this.io.to(this.roomId).emit('image_ready', {
+            ...imageInfo,
+            storyIndex: this.storyGenerator.getHistory().length + 1
+          });
+        }
+        
+        // 图片生成后保存数据
+        this.saveRoomData();
+      };
+      
+      // 使用故事生成器生成初始故事（传入音频和图片回调）
+      const processed = await this.storyGenerator.generateInitialStory(onAudioReady, onImageReady);
       
       // 更新房间状态
       this.roomState.currentStory = processed.story;
+      this.roomState.currentAudioUrl = processed.audioUrl; // 初始为null，异步生成
+      this.roomState.currentImages = []; // 重置图片列表，等待异步生成
       this.roomState.isActive = true;
       
       // 初始化投票
@@ -104,6 +207,7 @@ class NovelRoom {
       this.logger.logState({
         currentStory: this.roomState.currentStory.substring(0, 200) + '...',
         choices: processed.choices,
+        audioUrl: processed.audioUrl,
         isVoting: this.votingManager.isVoting(),
         connectedUsers: this.connectedUsers.size
       });
@@ -115,6 +219,9 @@ class NovelRoom {
       if (this.io) {
         this.io.to(this.roomId).emit('novel_state', this.getNovelState());
       }
+      
+      // 保存房间数据
+      this.saveRoomData();
       
     } catch (error) {
       this.logger.logError(`房间 ${this.roomId} 初始化小说失败: ${error.message}`);
@@ -138,6 +245,11 @@ class NovelRoom {
    */
   async addVote(userId, choice, coinsSpent = 0, socketId = null) {
     const result = await this.votingManager.addVote(userId, choice, coinsSpent, socketId);
+    
+    // 投票后保存数据
+    if (result.success) {
+      this.saveRoomData();
+    }
     
     // 【调试】接收到投票后立即结束投票计时器
     const debugMode = true;
@@ -219,23 +331,71 @@ class NovelRoom {
       // 清空讨论区并归档消息
       const archivedDiscussion = this.discussionManager.clearAndArchive();
 
-      // 保存当前故事到历史
+      // 保存当前故事到历史（包含音频和图片）
       this.storyGenerator.addToHistory(
         this.roomState.currentStory,
         winningChoice,
         votes,
         userVotes,
-        archivedDiscussion
+        archivedDiscussion,
+        this.roomState.currentAudioUrl,
+        this.roomState.currentImages
       );
 
-      // 生成下一段故事
-      const processed = await this.storyGenerator.continueStory(winningChoice);
+      // 创建音频准备就绪的回调函数
+      const onAudioReady = (audioUrl) => {
+        this.roomState.currentAudioUrl = audioUrl;
+        this.logger.logSuccess(`房间 ${this.roomId} 音频已准备好: ${audioUrl}`);
+        
+        // 广播音频URL更新
+        if (this.io) {
+          this.io.to(this.roomId).emit('audio_ready', {
+            audioUrl: audioUrl,
+            storyIndex: this.storyGenerator.getHistory().length + 1
+          });
+        }
+        
+        // 音频生成后保存数据
+        this.saveRoomData();
+      };
+      
+      // 创建图片准备就绪的回调函数
+      const onImageReady = (imageData) => {
+        this.logger.logSuccess(`房间 ${this.roomId} 图片已准备好: ${imageData.index + 1}/${imageData.total}`);
+        
+        // 添加到当前图片列表
+        const imageInfo = {
+          index: imageData.index,
+          imageUrl: imageData.imageUrl,
+          prompt: imageData.prompt,
+          paragraph: imageData.paragraph || '', // 对应的文段
+          timestamp: new Date().toISOString()
+        };
+        
+        this.roomState.currentImages.push(imageInfo);
+        
+        // 广播新图片到前端
+        if (this.io) {
+          this.io.to(this.roomId).emit('image_ready', {
+            ...imageInfo,
+            storyIndex: this.storyGenerator.getHistory().length + 1
+          });
+        }
+        
+        // 图片生成后保存数据
+        this.saveRoomData();
+      };
+
+      // 生成下一段故事（传入音频和图片回调）
+      const processed = await this.storyGenerator.continueStory(winningChoice, onAudioReady, onImageReady);
 
       // 故事生成成功，清理金币消费记录
       this.votingManager.clearCoinSpendingRecords();
 
       // 更新房间状态
       this.roomState.currentStory = processed.story;
+      this.roomState.currentAudioUrl = processed.audioUrl; // 初始为null，异步生成
+      this.roomState.currentImages = []; // 重置图片列表，等待异步生成
 
       // 重新初始化投票
       this.votingManager.initializeVoting(processed.choices);
@@ -245,6 +405,7 @@ class NovelRoom {
         this.io.to(this.roomId).emit('story_updated', {
           story: processed.story,
           choices: processed.choices,
+          audioUrl: processed.audioUrl, // 初始为null
           winningChoice,
           votes: this.votingManager.getVotingState().votes,
           storyHistory: this.storyGenerator.getHistory(),
@@ -253,6 +414,9 @@ class NovelRoom {
 
       // 开始新的投票
       this.startVotingTimer();
+      
+      // 新故事生成后保存数据
+      this.saveRoomData();
 
     } catch (error) {
       this.logger.logError(`生成下一段故事失败: ${error.message}`);
@@ -283,7 +447,14 @@ class NovelRoom {
    * @returns {Object} 添加结果
    */
   async addCustomOption(userId, customOption, socketId = null) {
-    return await this.votingManager.addCustomOption(userId, customOption, socketId);
+    const result = await this.votingManager.addCustomOption(userId, customOption, socketId);
+    
+    // 添加自定义选项后保存数据
+    if (result.success) {
+      this.saveRoomData();
+    }
+    
+    return result;
   }
 
 
@@ -298,6 +469,8 @@ class NovelRoom {
     return {
       // 房间基本状态
       currentStory: this.roomState.currentStory,
+      audioUrl: this.roomState.currentAudioUrl, // 包含音频URL
+      currentImages: this.roomState.currentImages, // 包含图片列表
       isActive: this.roomState.isActive,
       
       // 投票状态

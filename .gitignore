@@ -1,3 +1,8 @@
 ﻿client/node_modules
 server/node_modules
 server/data
+server/public/audio/tts_2655451fcd24_1761639982197.wav
+
+# 环境变量文件
+.env
+server/.env

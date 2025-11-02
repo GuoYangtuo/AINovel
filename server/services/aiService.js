@@ -7,7 +7,7 @@ const { OpenAI } = require('openai');
 class AIClient {
   constructor(config = {}) {
     this.config = {
-      apiKey: config.apiKey || "sk-48d5645fd30347fe905e51c2d431113f",
+      apiKey: config.apiKey || process.env.AI_API_KEY,
       baseURL: config.baseURL || "https://api.deepseek.com",
       model: config.model || "deepseek-chat",
       ...config

@@ -134,7 +134,7 @@ const UserSettings = () => {
                     {user?.username}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    欢迎来到 《选择之书》 ！
+                    阿巴阿巴
                   </Typography>
                 </Box>
               </Box>

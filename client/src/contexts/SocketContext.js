@@ -76,9 +76,43 @@ export const SocketProvider = ({ children }) => {
           userVotes: {},
           isVoting: true,
           isGenerating: false,
+          audioUrl: data.audioUrl || null, // 初始为null，等待异步生成
+          currentImages: [], // 重置图片列表，等待新图片生成
           storyHistory: data.storyHistory || prev.storyHistory
         }));
         toast.success(`故事继续！选择了: ${data.winningChoice}`);
+      });
+
+      // 音频准备就绪事件
+      newSocket.on('audio_ready', (data) => {
+        console.log('音频已准备好:', data);
+        setNovelState(prev => ({
+          ...prev,
+          audioUrl: data.audioUrl
+        }));
+        toast.success('🎵 音频已生成，可以播放了！', {
+          duration: 3000,
+          position: 'bottom-right'
+        });
+      });
+
+      // 图片准备就绪事件
+      newSocket.on('image_ready', (data) => {
+        console.log('图片已准备好:', data);
+        setNovelState(prev => ({
+          ...prev,
+          currentImages: [...(prev.currentImages || []), {
+            index: data.index,
+            imageUrl: data.imageUrl,
+            prompt: data.prompt,
+            paragraph: data.paragraph || '', // 对应的文段
+            timestamp: data.timestamp
+          }]
+        }));
+        toast.success(`🖼️ 图片 ${data.index + 1} 已生成！`, {
+          duration: 2000,
+          position: 'bottom-right'
+        });
       });
 
       newSocket.on('vote_update', (data) => {

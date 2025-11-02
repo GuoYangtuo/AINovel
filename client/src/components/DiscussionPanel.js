@@ -33,17 +33,6 @@ const DiscussionPanel = ({
   const [error, setError] = useState('');
   const messagesEndRef = useRef(null);
 
-  // 当discussion prop变化时更新messages
-  useEffect(() => {
-    setMessages(discussion.messages || []);
-    console.log(discussion.messages)
-  }, [discussion.messages]);
-
-  // 自动滚动到底部
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };

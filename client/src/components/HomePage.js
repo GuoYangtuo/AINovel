@@ -103,7 +103,7 @@ const HomePage = () => {
   return (
     <>
       <Navbar 
-        title="选择之书 - 选择你想要体验的故事"
+        title="选择一个正在进行的故事，参与其中，剧情的发展会被你的选择影响"
         showUserMenu={true}
         onCreateRoom={handleCreateRoom}
         onGoToSettings={handleGoToSettings}
@@ -129,13 +129,6 @@ const HomePage = () => {
             border: '1px solid rgba(255, 255, 255, 0.2)',
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', mb: 2 }}>
-            选择之书
-          </Typography>
-          <Typography variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            选择一个正在进行的故事，参与其中，剧情的发展会被你的选择影响
-          </Typography>
-          
           {loading && (
             <Box display="flex" justifyContent="center" alignItems="center" py={4}>
               <CircularProgress />

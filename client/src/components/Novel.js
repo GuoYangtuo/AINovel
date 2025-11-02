@@ -134,7 +134,7 @@ const Novel = () => {
         }}
       />
 
-      <Container maxWidth="md" sx={{ 
+      <Container maxWidth={novelState?.currentImages?.length > 0 ? "xl" : "md"} sx={{ 
         py: 3, 
         pt: 10, 
         px: { xs: 1, sm: 2, md: 3 } 
@@ -200,6 +200,8 @@ const Novel = () => {
             customOptions={novelState.customOptions || []}
             nextCustomOptionCost={novelState.nextCustomOptionCost || null}
             availableCustomOptionSlots={novelState.availableCustomOptionSlots || 0}
+            audioUrl={novelState.audioUrl || null}
+            currentImages={novelState.currentImages || []}
           />
         )}
       </Container>
