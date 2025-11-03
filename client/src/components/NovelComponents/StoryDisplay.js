@@ -79,8 +79,8 @@ const StoryDisplay = ({
     return (
       <Paper
         sx={{
-          p: 2,
-          mb: 3,
+          p: 1.5,
+          mb: 2,
           bgcolor: 'rgba(76, 175, 80, 0.1)',
           border: '1px solid rgba(76, 175, 80, 0.2)',
           borderRadius: 2,
@@ -201,7 +201,7 @@ const StoryDisplay = ({
         <Grid item xs={12} md={7}>
           <Paper
             sx={{
-              p: 3,
+              p: 1.5,
               bgcolor: 'rgba(255, 255, 255, 0.05)',
               border: '2px solid rgba(102, 126, 234, 0.3)',
               borderRadius: 2,
@@ -428,7 +428,7 @@ const StoryDisplay = ({
                         <Paper
                           key={`history-text-${index}-${paraIdx}`}
                           sx={{
-                            p: 3,
+                            p: 1.5,
                             mb: 3,
                             bgcolor: 'rgba(255, 255, 255, 0.05)',
                             border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -479,7 +479,7 @@ const StoryDisplay = ({
               /* 没有图片时，使用传统布局 */
               <Paper
                 sx={{
-                  p: 3,
+                  p: 1.5,
                   mb: 2,
                   bgcolor: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',

@@ -242,7 +242,7 @@ const VotingPanel = ({
           </Paper>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {/* 原有选项 */}
           {choices.map((choice, index) => {
             const voteCount = votes[choice] || 0;
