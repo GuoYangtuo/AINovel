@@ -40,7 +40,7 @@ class StoryGenerator {
 
     try {
       let response;
-      if(false){
+      if(process.env.API_ENABLE === 'true'){
         response = await this.callWithRetry(async () => {
           return await this.aiClient.generateContent(role, prompt);
         });
@@ -268,11 +268,13 @@ class StoryGenerator {
 
 只输出JSON数组，不要其他文字。`;
     
+    this.logger.log(`prompt`, `生成图片提示词`, userPrompt);
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // 调用AI生成图片提示词
         let response;
-        if(false){
+        if(process.env.API_ENABLE === 'true'){
           response = await this.aiClient.generateContent(systemPrompt, userPrompt);
         }else{
           //调试模式：从固定文件读取示例作为响应

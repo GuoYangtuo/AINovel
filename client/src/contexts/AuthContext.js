@@ -4,6 +4,20 @@ import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
+// 检查是否启用调试模式
+const DEBUG_MODE = process.env.REACT_APP_DEBUG_MODE === 'true';
+
+// 生成或获取设备唯一ID
+const getDeviceId = () => {
+  let deviceId = localStorage.getItem('deviceId');
+  if (!deviceId) {
+    // 生成随机ID（基于时间戳和随机数）
+    deviceId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('deviceId', deviceId);
+  }
+  return deviceId;
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -18,7 +32,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 检查本地存储中的token
+    // 调试模式：自动登录
+    if (DEBUG_MODE) {
+      const deviceId = getDeviceId();
+      const debugUser = {
+        userId: `debug_${deviceId}`,
+        username: `测试用户_${deviceId.substring(0, 6)}`,
+        coins: 1000 // 调试模式下的初始金币
+      };
+      
+      setToken('debug');
+      setUser(debugUser);
+      
+      console.log('[调试模式] 自动登录:', debugUser.username);
+      setLoading(false);
+      return;
+    }
+    
+    // 生产模式：检查本地存储中的token
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     

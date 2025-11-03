@@ -45,27 +45,7 @@ class ImageService {
         onProgress({ status: 'starting', prompt });
       }
 
-      // 调试模式：使用固定数据，不请求AI
-      if (true) {
-        // 模拟延迟
-        await this.delay(500);
-        
-        // 使用固定的图片数据（从room2.json中获取）
-        const imageUrl = process.env.IMAGE_URL;
-        
-        if (onProgress) {
-          onProgress({ status: 'completed', prompt, imageUrl });
-        }
-
-        console.log(`[调试模式] 图片生成成功: ${prompt.substring(0, 50)}...`);
-
-        return {
-          success: true,
-          imageUrl,
-          prompt,
-          timestamp: new Date().toISOString()
-        };
-      } else {
+      if (process.env.API_ENABLE === 'true') {
         // 正常模式：请求AI生成图片
         const response = await axios.post(
           this.apiUrl,
@@ -102,6 +82,27 @@ class ImageService {
         } else {
           throw new Error('API返回数据格式不正确');
         }
+      } else {
+        // 调试模式：使用固定数据，不请求AI
+        
+        // 模拟延迟
+        await this.delay(500);
+        
+        // 使用固定的图片数据（从room2.json中获取）
+        const imageUrl = process.env.IMAGE_URL;
+        
+        if (onProgress) {
+          onProgress({ status: 'completed', prompt, imageUrl });
+        }
+
+        console.log(`[调试模式] 图片生成成功: ${prompt.substring(0, 50)}...`);
+
+        return {
+          success: true,
+          imageUrl,
+          prompt,
+          timestamp: new Date().toISOString()
+        };
       }
 
     } catch (error) {

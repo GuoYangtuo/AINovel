@@ -239,12 +239,22 @@ const StoryDisplay = ({
 
   // 渲染当前故事的图文配对内容
   const renderCurrentStoryWithImages = () => {
-    if (!currentStory || !currentImages || currentImages.length === 0) {
+    if (!currentStory) {
       return null;
     }
 
     // 将故事按换行分段
     const paragraphs = currentStory.split('\n').filter(p => p.trim() !== '');
+    
+    // 创建图片映射，以段落文本为键
+    const imageMap = new Map();
+    if (currentImages && currentImages.length > 0) {
+      currentImages.forEach(image => {
+        if (image.paragraph) {
+          imageMap.set(image.paragraph.trim(), image);
+        }
+      });
+    }
     
     return (
       <Box sx={{ mb: 3 }}>
@@ -259,21 +269,65 @@ const StoryDisplay = ({
           ) : (
             <Chip size="small" label="投票已结束" color="default" sx={{ ml: 1 }} />
           )}
-          <Chip 
-            size="small" 
-            icon={<ImageIcon />}
-            label={`${currentImages.length} 张配图`}
-            color="secondary"
-            sx={{ ml: 1 }}
-          />
+          {currentImages && currentImages.length > 0 && (
+            <Chip 
+              size="small" 
+              icon={<ImageIcon />}
+              label={`${currentImages.length} 张配图`}
+              color="secondary"
+              sx={{ ml: 1 }}
+            />
+          )}
         </Box>
 
-        {/* 渲染图文配对 */}
-        {currentImages.map((image, idx) => {
-          if (image.paragraph) {
-            return renderParagraphWithImage(image.paragraph, image, idx);
+        {/* 渲染所有段落，有配图的使用图文配对，没有配图的使用纯文本 */}
+        {paragraphs.map((paragraph, idx) => {
+          const trimmedParagraph = paragraph.trim();
+          const image = imageMap.get(trimmedParagraph);
+          
+          if (image) {
+            // 有配图的段落，使用图文配对布局
+            return renderParagraphWithImage(trimmedParagraph, image, idx);
+          } else {
+            // 没有配图的段落，使用纯文本布局
+            return (
+              <Paper
+                key={`text-only-${idx}`}
+                sx={{
+                  p: 1.5,
+                  mb: 1.5,
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '4px',
+                    height: '100%',
+                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                    borderRadius: '0 4px 4px 0'
+                  }
+                }}
+              >
+                <Box sx={{ pl: 1 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      lineHeight: 1.8,
+                      fontSize: '1.1rem',
+                      textIndent: '2em',
+                      color: 'text.primary'
+                    }}
+                  >
+                    {trimmedParagraph}
+                  </Typography>
+                </Box>
+              </Paper>
+            );
           }
-          return null;
         })}
 
         {/* 音频播放器 */}
@@ -288,9 +342,6 @@ const StoryDisplay = ({
       </Box>
     );
   };
-
-  // 是否有图片
-  const hasImages = currentImages && currentImages.length > 0;
 
   return (
     <Box>
@@ -351,12 +402,68 @@ const StoryDisplay = ({
             {/* 如果有图片，使用图文配对布局 */}
             {historyItem.images && historyItem.images.length > 0 ? (
               <Box sx={{ mb: 2 }}>
-                {historyItem.images.map((image, imgIdx) => {
-                  if (image.paragraph) {
-                    return renderParagraphWithImage(image.paragraph, image, `history-${index}-${imgIdx}`);
-                  }
-                  return null;
-                })}
+                {(() => {
+                  // 将故事按换行分段
+                  const paragraphs = historyItem.story.split('\n').filter(p => p.trim() !== '');
+                  
+                  // 创建图片映射，以段落文本为键
+                  const imageMap = new Map();
+                  historyItem.images.forEach(image => {
+                    if (image.paragraph) {
+                      imageMap.set(image.paragraph.trim(), image);
+                    }
+                  });
+                  
+                  // 渲染所有段落
+                  return paragraphs.map((paragraph, paraIdx) => {
+                    const trimmedParagraph = paragraph.trim();
+                    const image = imageMap.get(trimmedParagraph);
+                    
+                    if (image) {
+                      // 有配图的段落
+                      return renderParagraphWithImage(trimmedParagraph, image, `history-${index}-${paraIdx}`);
+                    } else {
+                      // 没有配图的段落
+                      return (
+                        <Paper
+                          key={`history-text-${index}-${paraIdx}`}
+                          sx={{
+                            p: 3,
+                            mb: 3,
+                            bgcolor: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: 2,
+                            position: 'relative',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '4px',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                              borderRadius: '0 4px 4px 0'
+                            }
+                          }}
+                        >
+                          <Box sx={{ pl: 2 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                lineHeight: 1.8,
+                                fontSize: '1.1rem',
+                                textIndent: '2em',
+                                color: 'text.primary'
+                              }}
+                            >
+                              {trimmedParagraph}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      );
+                    }
+                  });
+                })()}
                 
                 {/* 历史故事的音频播放器 */}
                 {historyItem.audioUrl && (
@@ -462,59 +569,7 @@ const StoryDisplay = ({
         ))}
 
         {/* 当前最新的故事段落 */}
-        {currentStory ? (
-          hasImages ? (
-            // 有图片时，显示图文配对
-            renderCurrentStoryWithImages()
-          ) : (
-            // 无图片时，显示传统布局
-            <Box sx={{ mb: 3 }}>
-              <Paper
-                sx={{
-                  p: { xs: 0, sm: 1, md: 3 },
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  border: '2px solid rgba(102, 126, 234, 0.3)',
-                  borderRadius: 2,
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '4px',
-                    height: '100%',
-                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                    borderRadius: '0 4px 4px 0'
-                  }
-                }}
-              >
-                <Box sx={{ pl: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold' }}>
-                      第 {storyHistory.length + 1} 段故事 (最新)
-                    </Typography>
-                    {isGenerating ? (
-                      <Chip size="small" label="AI生成中..." color="warning" sx={{ ml: 1 }} />
-                    ) : isVoting ? (
-                      <Chip size="small" label="正在投票中" color="primary" sx={{ ml: 1 }} />
-                    ) : (
-                      <Chip size="small" label="投票已结束" color="default" sx={{ ml: 1 }} />
-                    )}
-                  </Box>
-                  {formatStoryText(currentStory)}
-                  
-                  {/* 音频播放器 */}
-                  {audioUrl && (
-                    <AudioPlayer 
-                      audioUrl={audioUrl} 
-                      storyIndex={storyHistory.length + 1}
-                    />
-                  )}
-                </Box>
-              </Paper>
-            </Box>
-          )
-        ) : null}
+        {currentStory ? renderCurrentStoryWithImages() : null}
 
         {/* 当前故事的计时器和投票UI */}
         {currentStory && (

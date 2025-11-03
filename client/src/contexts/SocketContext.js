@@ -25,14 +25,28 @@ export const SocketProvider = ({ children }) => {
     if (token && user) {
       // 创建socket连接 - 使用当前访问的主机地址
       // 如果通过内网IP访问前端，socket也会连接到相同的内网IP
+      let socketUrl;
       const hostname = window.location.hostname;
-      const socketUrl = `http://${hostname}:3001`;
-      console.log(`Socket连接地址: ${socketUrl}`);
+      if (hostname === 'abc.indiegamehub.xyz') {
+        socketUrl = `http://socket.indiegamehub.xyz`;
+      }else{
+        socketUrl = `http://${hostname}:3001`;
+      }
+      console.log(`Socket连接地址: ${socketUrl}`);  
+      
+      // 准备认证信息
+      const authInfo = { token: token };
+      
+      // 调试模式下传递设备ID
+      if (process.env.REACT_APP_DEBUG_MODE === 'true') {
+        const deviceId = localStorage.getItem('deviceId');
+        if (deviceId) {
+          authInfo.deviceId = deviceId;
+        }
+      }
       
       const newSocket = io(socketUrl, {
-        auth: {
-          token: token
-        }
+        auth: authInfo
       });
 
       newSocket.on('connect', () => {
