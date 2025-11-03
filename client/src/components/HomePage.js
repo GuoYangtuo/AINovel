@@ -118,126 +118,114 @@ const HomePage = () => {
           px: { xs: 1, sm: 2, md: 3 }
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2, sm: 3, md: 4 },
-            mb: { xs: 2, sm: 3, md: 4 },
-            mx: { xs: 0, sm: 'auto' },
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 3,
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-          }}
-        >
-          {loading && (
-            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-              <CircularProgress />
-              <Typography variant="body1" sx={{ ml: 2 }}>
-                正在加载小说列表...
-              </Typography>
-            </Box>
-          )}
+        {loading && (
+          <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+            <CircularProgress />
+            <Typography variant="body1" sx={{ ml: 2 }}>
+              正在加载小说列表...
+            </Typography>
+          </Box>
+        )}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-          {!loading && !error && novels.length === 0 && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              暂时没有正在运行的小说，请稍后再试。
-            </Alert>
-          )}
+        {!loading && !error && novels.length === 0 && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            暂时没有正在运行的小说，请稍后再试。
+          </Alert>
+        )}
 
-          <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
-            {novels.map((novel) => (
-              <Grid item xs={12} md={6} key={novel.roomId}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                    }
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3 } }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                      <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', flex: 1 }}>
-                        {novel.title}
-                      </Typography>
-                      <Chip
-                        icon={novel.isActive ? <PlayArrow /> : <BookmarkBorder />}
-                        label={novel.isActive ? '进行中' : '准备中'}
-                        color={novel.isActive ? 'success' : 'warning'}
-                        size="small"
-                        sx={{ ml: 1 }}
-                      />
-                    </Box>
-
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary" 
-                      sx={{ 
-                        mb: 3, 
-                        minHeight: '60px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {novel.currentStory || '故事即将开始...'}
+        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+          {novels.map((novel) => (
+            <Grid item xs={12} md={6} key={novel.roomId}>
+              <Card
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                  }
+                }}
+              >
+                <CardContent sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3 } }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                    <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', flex: 1 }}>
+                      {novel.title}
                     </Typography>
+                    <Chip
+                      icon={novel.isActive ? <PlayArrow /> : <BookmarkBorder />}
+                      label={novel.isActive ? '进行中' : '准备中'}
+                      color={novel.isActive ? 'success' : 'warning'}
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  </Box>
 
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <PeopleAlt fontSize="small" color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {novel.connectedUsers} 人在线
-                        </Typography>
-                      </Box>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Schedule fontSize="small" color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {formatTime(novel.createdAt)}
-                        </Typography>
-                      </Box>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      mb: 3, 
+                      minHeight: '60px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
+                    {novel.currentStory || '故事即将开始...'}
+                  </Typography>
+
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <PeopleAlt fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {novel.connectedUsers} 人在线
+                      </Typography>
                     </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Schedule fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {formatTime(novel.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
 
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      size="large"
-                      onClick={() => joinNovel(novel.roomId)}
-                      sx={{
-                        mt: 'auto',
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1.1rem',
-                        py: 1.5,
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #5a6fd8 30%, #6a4190 90%)',
-                        }
-                      }}
-                    >
-                      {novel.isActive ? '加入故事' : '等待开始'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    onClick={() => joinNovel(novel.roomId)}
+                    sx={{
+                      mt: 'auto',
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1.1rem',
+                      py: 1.5,
+                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #5a6fd8 30%, #6a4190 90%)',
+                      }
+                    }}
+                  >
+                    {novel.isActive ? '加入故事' : '等待开始'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Container>
 
       {/* 充值对话框 */}
