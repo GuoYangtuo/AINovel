@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import Login from './components/Login';
 import Register from './components/Register';
 import Novel from './components/Novel';
+import NovelLive from './components/NovelLive';
 import HomePage from './components/HomePage';
 import CreateRoom from './components/CreateRoom';
 import UserSettings from './components/UserSettings';
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/novel/:roomId" element={<Novel />} />
+        <Route path="/novel-live/:roomId" element={<NovelLive />} />
         <Route path="/create-room" element={<CreateRoom />} />
         <Route path="/settings" element={<UserSettings />} />
         <Route path="/" element={<HomePage />} />
@@ -54,6 +56,7 @@ function AppRoutes() {
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
       <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
       <Route path="/novel/:roomId" element={user ? <Novel /> : <Navigate to="/login" />} />
+      <Route path="/novel-live/:roomId" element={<NovelLive />} />
       <Route path="/create-room" element={user ? <CreateRoom /> : <Navigate to="/login" />} />
       <Route path="/settings" element={user ? <UserSettings /> : <Navigate to="/login" />} />
       <Route path="/" element={user ? <HomePage /> : <Navigate to="/login" />} />
