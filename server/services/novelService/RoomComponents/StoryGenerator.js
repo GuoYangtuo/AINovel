@@ -186,12 +186,12 @@ class StoryGenerator {
         try {
           const imagePrompts = await this.generateImagePrompts(story);
           
-          // 如果生成了图片提示词，调用图片生成服务
-          if (imagePrompts && imagePrompts.length > 0 && onImageReady) {
+          // 如果生成了图片提示词，调用图片生成服务（此处可以直接关闭图片生成，只需修改最后的bool）
+          if (imagePrompts && imagePrompts.length > 0 && onImageReady && false) {
             this.logger.logInfo('开始生成故事配图...');
             
             // 调试模式：只生成前4张图片
-            const maxImages = 4;
+            const maxImages = null;
             
             // 提取提示词数组
             const promptTexts = imagePrompts.map(item => item.prompt);

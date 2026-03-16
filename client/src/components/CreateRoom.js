@@ -234,6 +234,16 @@ const CreateRoom = () => {
     });
   };
 
+  // 检查模板数据是否被用户修改过
+  const isTemplateModified = () => {
+    if (!selectedTemplate) return true;
+    return JSON.stringify(selectedTemplate) !== JSON.stringify({
+      ...templateData,
+      id: selectedTemplate.id,
+      createdAt: selectedTemplate.createdAt
+    });
+  };
+
   // 创建房间
   const createRoom = async () => {
     try {
@@ -245,8 +255,54 @@ const CreateRoom = () => {
       setLoading(true);
       setError('');
 
-      // 如果是从模板创建，使用模板API
-      if (selectedTemplate) {
+      // 判断模板是否被修改
+      const modified = isTemplateModified();
+
+      // 如果从模板创建且模板被修改了，先创建新模板
+      if (selectedTemplate && modified) {
+        // 创建新模板
+        const templateResponse = await fetch('/api/templates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: roomInfo.title,
+            description: roomInfo.description,
+            tags: roomInfo.tags,
+            ...templateData
+          })
+        });
+
+        const templateData_result = await templateResponse.json();
+        if (templateData_result.success) {
+          // 使用新创建的模板创建房间
+          const roomResponse = await fetch(`/api/templates/${templateData_result.template.id}/create-room`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              roomId: roomInfo.roomId,
+              title: roomInfo.title,
+              saveAsTemplate: false // 不需要再保存，因为已经是新模板了
+            })
+          });
+
+          const roomData = await roomResponse.json();
+          if (roomData.success) {
+            setSuccess('房间创建成功！小说正在初始化，请稍候跳转...');
+            setTimeout(() => {
+              navigate(`/novel/${roomInfo.roomId}`);
+            }, 3000);
+          } else {
+            setError(roomData.message || '创建房间失败');
+          }
+        } else {
+          setError(templateData_result.message || '创建模板失败');
+        }
+      } else if (selectedTemplate && !modified) {
+        // 模板未被修改，使用原始模板创建房间
         const response = await fetch(`/api/templates/${selectedTemplate.id}/create-room`, {
           method: 'POST',
           headers: {

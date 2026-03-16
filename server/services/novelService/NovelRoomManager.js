@@ -203,7 +203,7 @@ class NovelRoomManager {
       
       // 获取模板
       const testTemplate = templateService.getTemplateById('test-room-template');
-      const fantasyTemplate = templateService.getTemplateById('fantasy-adventure-template');
+      const timeTravelTemplate = templateService.getTemplateById('xiaoxi-time-travel');
       
       // 创建测试房间1，使用测试模板
       if (testTemplate && false) {
@@ -215,14 +215,14 @@ class NovelRoomManager {
         console.warn('测试模板未找到，跳过创建房间1');
       }
       
-      // 创建测试房间2，使用奇幻模板
-      if (fantasyTemplate) {
-        const roomData2 = templateService.createRoomFromTemplate(fantasyTemplate);
-        const room2 = this.createRoom('room2', '魔法学院的奇幻冒险', roomData2);
+      // 创建测试房间2，使用时光穿越模板
+      if (timeTravelTemplate) {
+        const roomData2 = templateService.createRoomFromTemplate(timeTravelTemplate);
+        const room2 = this.createRoom('room2', '小希的时光穿越之旅', roomData2);
         await room2.initializeNovel(io);
         console.log('测试房间2创建成功');
       } else {
-        console.warn('奇幻模板未找到，跳过创建房间2');
+        console.warn('时光穿越模板未找到，跳过创建房间2');
       }
       
       console.log('测试房间初始化完成');
