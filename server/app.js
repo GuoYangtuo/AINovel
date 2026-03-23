@@ -148,13 +148,14 @@ io.on('connection', (socket) => {
   socket.on('vote', async (data) => {
     const { choice, coinsSpent = 0 } = data;
     const userId = socket.userId;
+    const username = socket.username || userId;
     
     if (!currentRoomId) {
       socket.emit('vote_error', { message: '请先加入房间' });
       return;
     }
     
-    const result = await addVote(userId, socket.username, choice, currentRoomId, coinsSpent, socket.id);
+    const result = await addVote(userId, username, choice, currentRoomId, coinsSpent, socket.id);
     
     if (result.success) {
       // 向房间内所有用户广播投票更新（包含完整 userVotes）

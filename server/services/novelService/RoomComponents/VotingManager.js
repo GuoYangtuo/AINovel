@@ -309,9 +309,10 @@ class VotingManager {
       ? `投票成功！已扣除${coinsSpent}金币，总计${totalVotes}票` 
       : '投票成功！使用基础投票权（1票）';
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       votes: this.votingState.votes,
+      userVotes: { ...this.votingState.userVotes },
       userVote: this.votingState.userVotes[userId],
       message
     };

@@ -33,17 +33,28 @@ module.exports = {
   /**
    * 添加投票（兼容接口）
    * @param {string} userId - 用户ID
+   * @param {string} username - 用户昵称
    * @param {string} choice - 选择的选项
    * @param {string} roomId - 房间ID，默认为'room1'
    * @param {number} coinsSpent - 消费的金币数量，默认为0
    * @param {string} socketId - Socket ID
    * @returns {Object} 投票结果
    */
-  addVote: async (userId, choice, roomId = 'room1', coinsSpent = 0, socketId = null) => {
+  addVote: async (userId, username, choice, roomId = 'room1', coinsSpent = 0, socketId = null) => {
     const room = novelRoomManager.getRoom(roomId);
-    return room ? await room.addVote(userId, choice, coinsSpent, socketId) : { 
-      success: false, 
-      message: '房间不存在' 
+    if (!room) {
+      return {
+        success: false,
+        message: '房间不存在'
+      };
+    }
+    
+    const result = await room.addVote(userId, username || userId, choice, coinsSpent, socketId);
+    
+    // 返回完整结果，包括 userVotes 用于广播
+    return {
+      ...result,
+      userVotes: room.votingManager?.votingState?.userVotes || result.userVotes
     };
   },
 

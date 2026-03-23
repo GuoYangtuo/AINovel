@@ -102,17 +102,44 @@ const VoterRecordList = ({ choices, userVotes = {} }) => {
     }
   });
 
-  // 自定义选项的投票人
+  // 收集自定义选项的投票人
+  const customVoters = [];
   Object.entries(userVotes).forEach(([userId, voteInfo]) => {
     if (voteInfo.choice && votersByChoice[voteInfo.choice] === undefined) {
-      if (!votersByChoice._custom) votersByChoice._custom = [];
-      votersByChoice._custom.push({
+      customVoters.push({
         userId,
         username: voteInfo.username || `用户_${userId.slice(0, 6)}`,
         totalVotes: voteInfo.totalVotes || 1
       });
     }
   });
+
+  // 构建设置项列表（含自定义选项），按票数降序排列
+  const choiceEntries = [
+    ...choices.map(choice => ({
+      choice,
+      voters: votersByChoice[choice] || [],
+      isCustom: false
+    })),
+    ...(customVoters.length > 0 ? [{ choice: '自定义选项', voters: customVoters, isCustom: true }] : [])
+  ].filter(item => item.voters.length > 0)
+   .sort((a, b) => b.voters.length - a.voters.length);
+
+  if (choiceEntries.length === 0) {
+    return (
+      <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <HowToVote sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            投票记录
+          </Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          暂无投票记录
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
@@ -126,63 +153,118 @@ const VoterRecordList = ({ choices, userVotes = {} }) => {
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {choices.map((choice, idx) => {
-          const voters = votersByChoice[choice] || [];
-          if (voters.length === 0) return null;
-
-          return (
-            <Box key={idx}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.light', fontSize: '0.8rem' }}>
-                  {choice}
-                </Typography>
-                <Chip
-                  size="small"
-                  label={`${voters.length}人`}
-                  sx={{ ml: 0.5, height: 18, fontSize: '0.65rem' }}
-                  color="primary"
-                  variant="outlined"
-                />
-              </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {voters.map((voter, vIdx) => (
-                  <Chip
-                    key={vIdx}
-                    size="small"
-                    label={`${voter.username} (${voter.totalVotes}票)`}
-                    sx={{ fontSize: '0.65rem', height: 20 }}
-                    variant="outlined"
-                    color="default"
-                  />
-                ))}
-              </Box>
-            </Box>
-          );
-        })}
-
-        {/* 自定义选项的投票人 */}
-        {votersByChoice._custom && votersByChoice._custom.length > 0 && (
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.light', fontSize: '0.8rem' }}>
-                自定义选项
+      {/* 每列一个选项，票数最高的在最上，横向排列 */}
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: 1
+      }}>
+        {choiceEntries.map((item, idx) => (
+          <Box
+            key={idx}
+            sx={{
+              bgcolor: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 1,
+              p: 1,
+              border: idx === 0 && !item.isCustom
+                ? '1px solid rgba(76, 175, 80, 0.4)'
+                : '1px solid rgba(255, 255, 255, 0.06)',
+              minWidth: 0
+            }}
+          >
+            {/* 选项标题 + 票数 */}
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              mb: 0.5,
+              pb: 0.5,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            }}>
+              {idx === 0 && !item.isCustom && (
+                <EmojiEvents sx={{ fontSize: 14, color: 'success.main' }} />
+              )}
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 'bold',
+                  color: item.isCustom ? 'warning.light' : (idx === 0 ? 'success.light' : 'primary.light'),
+                  fontSize: '0.8rem',
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {item.choice}
               </Typography>
+              <Chip
+                size="small"
+                label={`${item.voters.length}人`}
+                sx={{
+                  height: 18,
+                  fontSize: '0.65rem',
+                  minWidth: 36
+                }}
+                color={item.isCustom ? 'warning' : 'primary'}
+                variant={idx === 0 && !item.isCustom ? 'filled' : 'outlined'}
+              />
             </Box>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {votersByChoice._custom.map((voter, vIdx) => (
-                <Chip
+
+            {/* 投票人列表 - 竖排 */}
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.3
+            }}>
+              {item.voters.map((voter, vIdx) => (
+                <Box
                   key={vIdx}
-                  size="small"
-                  label={`${voter.username} (${voter.totalVotes}票)`}
-                  sx={{ fontSize: '0.65rem', height: 20 }}
-                  variant="outlined"
-                  color="warning"
-                />
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.4,
+                    py: 0.2
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      bgcolor: item.isCustom ? 'warning.main' : 'primary.main',
+                      flexShrink: 0
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.72rem',
+                      color: 'text.secondary',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1
+                    }}
+                  >
+                    {voter.username}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.68rem',
+                      color: item.isCustom ? 'warning.light' : 'primary.light',
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}
+                  >
+                    {voter.totalVotes > 1 ? `×${voter.totalVotes}票` : '1票'}
+                  </Typography>
+                </Box>
               ))}
             </Box>
           </Box>
-        )}
+        ))}
       </Box>
     </Paper>
   );

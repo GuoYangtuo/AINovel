@@ -253,7 +253,7 @@ class NovelRoom {
     }
     
     // 【调试】接收到投票后立即结束投票计时器
-    const debugMode = true;
+    const debugMode = process.env.REACT_APP_VOTE_IMMEDIATELY === 'true';
     if (this.votingManager.votingTimer && debugMode) {
       this.logger.logInfo('【调试模式】检测到投票，立即结束计时器');
       
