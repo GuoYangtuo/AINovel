@@ -45,5 +45,6 @@ class Proto:
         if self.ver == 0:
             # 这里做回调
             print("====> callback:", self.body.decode('utf-8'))
+            return
         else:
             return

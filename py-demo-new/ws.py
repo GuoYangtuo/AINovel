@@ -6,10 +6,55 @@ import time
 import hashlib
 import hmac
 import random
+import warnings
 from hashlib import sha256
 import proto
 
-# 该示例仅为demo，如需使用在生产环境需要自行按需调整
+# 抑制 HTTPS 警告
+warnings.filterwarnings("ignore", category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+# 日志开关
+QUIET_MODE = True  # True = 只输出关键事件
+
+def _log(*args, **kwargs):
+    if not QUIET_MODE:
+        print(*args, **kwargs)
+
+def _event(cmd, data):
+    """只输出关键事件"""
+    if cmd == "LIVE_OPEN_PLATFORM_LIVE_START":
+        print(f"[直播] 开始 - {data.get('title','')} / {data.get('area_name','')}")
+    elif cmd == "LIVE_OPEN_PLATFORM_LIVE_END":
+        print(f"[直播] 结束 - {data.get('title','')}")
+    elif cmd == "LIVE_OPEN_PLATFORM_DM":
+        uname = data.get("uname", "")
+        msg = data.get("msg", "")
+        print(f"[弹幕] {uname}: {msg}")
+    elif cmd == "LIVE_OPEN_PLATFORM_LIVE_ROOM_ENTER":
+        uname = data.get("uname", "")
+        print(f"[进房] {uname} 进入了直播间")
+    elif cmd == "LIVE_OPEN_PLATFORM_LIVE_ROOM_ENTER_CANCEL":
+        uname = data.get("uname", "")
+        print(f"[离开] {uname} 离开了直播间")
+    elif cmd == "INTERACT_WORD":
+        uname = data.get("uname", "")
+        print(f"[互动] {uname} 点赞了")
+    elif cmd == "DANMU_MSG":
+        # 老版弹幕协议兼容
+        info = data.get("info", [])
+        if len(info) >= 2:
+            uname = info[2][1] if len(info[2]) > 1 else ""
+            msg = info[1] if len(info) > 1 else ""
+            print(f"[弹幕] {uname}: {msg}")
+    elif cmd == "LIVE_OPEN_PLATFORM_SEND_GIFT":
+        uname = data.get("uname", "")
+        gift_name = data.get("gift_name", "")
+        gift_num = data.get("gift_num", 1)
+        print(f"[礼物] {uname} 送出 {gift_num} 个 {gift_name}")
+    else:
+        # 未知命令也打印，方便调试
+        if not QUIET_MODE:
+            print(f"[{cmd}] {json.dumps(data, ensure_ascii=False)}")
 
 
 class BiliClient:
@@ -79,12 +124,11 @@ class BiliClient:
         r = requests.post(url=postUrl, headers=headerMap,
                           data=params, verify=False)
         data = json.loads(r.content)
-        print(data)
-
-        self.gameId = str(data['data']['game_info']['game_id'])
-
-        # 获取长连地址和鉴权体
-        return str(data['data']['websocket_info']['wss_link'][0]), str(data['data']['websocket_info']['auth_body'])
+        self.gameId = data['data']['game_info']['game_id']
+        wss_link = data['data']['websocket_info']['wss_link'][0]
+        auth_body = data['data']['websocket_info']['auth_body']
+        _log(f"[连接] wss={wss_link}")
+        return wss_link, auth_body
 
      # 发送游戏心跳
     async def appheartBeat(self):
@@ -95,8 +139,7 @@ class BiliClient:
             headerMap = self.sign(params)
             r = requests.post(url=postUrl, headers=headerMap,
                           data=params, verify=False)
-            data = json.loads(r.content)
-            print("[BiliClient] send appheartBeat success")
+            _log(f"[BiliClient] send appheartBeat")
 
 
     # 发送鉴权信息
@@ -110,9 +153,9 @@ class BiliClient:
         resp.unpack(buf)
         respBody = json.loads(resp.body)
         if respBody["code"] != 0:
-            print("auth 失败")
+            print(f"[错误] auth 失败: {respBody}")
         else:
-            print("auth 成功")
+            print("[连接] auth 成功")
 
     # 发送心跳
     async def heartBeat(self, websocket):
@@ -121,36 +164,42 @@ class BiliClient:
             req = proto.Proto()
             req.op = 2
             await websocket.send(req.pack())
-            print("[BiliClient] send heartBeat success")
+            _log(f"[BiliClient] send heartBeat")
 
     # 读取信息
     async def recvLoop(self, websocket):
-        print("[BiliClient] run recv...")
+        print("[BiliClient] 开始接收消息...")
         while True:
             recvBuf = await websocket.recv()
             resp = proto.Proto()
             resp.unpack(recvBuf)
+            try:
+                body = json.loads(resp.body)
+                cmd = body.get("cmd", "")
+                data = body.get("data", {})
+                _event(cmd, data)
+            except (json.JSONDecodeError, KeyError):
+                _log(f"[原始] {resp.body}")
 
     # 建立连接
     async def connect(self):
         addr, authBody = self.getWebsocketInfo()
-        print(addr, authBody)
+        _log(f"[连接] addr={addr}")
         websocket = await websockets.connect(addr)
         # 鉴权
         await self.auth(websocket, authBody)
         return websocket
 
     def __enter__(self):
-        print("[BiliClient] enter")
+        print("[BiliClient] 进入连接...")
 
     def __exit__(self, type, value, trace):
-        # 关闭应用
         postUrl = "%s/v2/app/end" % self.host
         params = '{"game_id":"%s","app_id":%d}' % (self.gameId, self.appId)
         headerMap = self.sign(params)
         r = requests.post(url=postUrl, headers=headerMap,
                           data=params, verify=False)
-        print("[BiliClient] end app success", params)
+        print("[BiliClient] 结束应用成功")
 
 
 if __name__ == '__main__':
