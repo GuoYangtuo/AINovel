@@ -139,7 +139,7 @@ export const SocketProvider = ({ children }) => {
         setNovelState(prev => ({
           ...prev,
           votes: data.votes,
-          userVotes: { ...prev.userVotes, ...data.userVote }
+          userVotes: data.userVotes || prev.userVotes
         }));
       });
 

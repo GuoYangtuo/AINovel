@@ -238,13 +238,14 @@ class NovelRoom {
   /**
    * 添加投票
    * @param {string} userId - 用户ID
+   * @param {string} username - 用户昵称
    * @param {string} choice - 选择的选项
    * @param {number} coinsSpent - 消费的金币数量
    * @param {string} socketId - Socket ID
    * @returns {Object} 投票结果
    */
-  async addVote(userId, choice, coinsSpent = 0, socketId = null) {
-    const result = await this.votingManager.addVote(userId, choice, coinsSpent, socketId);
+  async addVote(userId, username, choice, coinsSpent = 0, socketId = null) {
+    const result = await this.votingManager.addVote(userId, username, choice, coinsSpent, socketId);
     
     // 投票后保存数据
     if (result.success) {

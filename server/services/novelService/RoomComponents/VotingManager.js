@@ -244,12 +244,13 @@ class VotingManager {
   /**
    * 添加投票
    * @param {string} userId - 用户ID
+   * @param {string} username - 用户昵称
    * @param {string} choice - 选择的选项
    * @param {number} coinsSpent - 消费的金币数量
    * @param {string} socketId - Socket ID
    * @returns {Object} 投票结果
    */
-  async addVote(userId, choice, coinsSpent = 0, socketId = null) {
+  async addVote(userId, username, choice, coinsSpent = 0, socketId = null) {
     if (!this.votingState.isVoting) {
       this.logger.logWarning('当前不在投票阶段');
       return { success: false, message: '当前不在投票阶段' };
@@ -291,6 +292,7 @@ class VotingManager {
     
     // 记录新投票
     this.votingState.userVotes[userId] = {
+      username,
       choice,
       coinsSpent,
       totalVotes,

@@ -152,13 +152,13 @@ io.on('connection', (socket) => {
       return;
     }
     
-    const result = await addVote(userId, choice, currentRoomId, coinsSpent, socket.id);
+    const result = await addVote(userId, socket.username, choice, currentRoomId, coinsSpent, socket.id);
     
     if (result.success) {
-      // 向房间内所有用户广播投票更新
+      // 向房间内所有用户广播投票更新（包含完整 userVotes）
       io.to(currentRoomId).emit('vote_update', {
         votes: result.votes,
-        userVote: { [userId]: result.userVote },
+        userVotes: result.userVotes,
         message: result.message
       });
       

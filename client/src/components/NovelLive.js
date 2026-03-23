@@ -68,6 +68,235 @@ const BORDER_COLORS = {
   default: '1px solid rgba(255, 255, 255, 0.1)',
 };
 
+// 已投票人记录列表组件
+const VoterRecordList = ({ choices, userVotes = {} }) => {
+  if (!choices || choices.length === 0 || Object.keys(userVotes).length === 0) {
+    return (
+      <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <HowToVote sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            投票记录
+          </Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          暂无投票记录
+        </Typography>
+      </Paper>
+    );
+  }
+
+  // 按选项分组投票人
+  const votersByChoice = {};
+  choices.forEach(choice => {
+    votersByChoice[choice] = [];
+  });
+
+  Object.entries(userVotes).forEach(([userId, voteInfo]) => {
+    if (voteInfo.choice && votersByChoice[voteInfo.choice] !== undefined) {
+      votersByChoice[voteInfo.choice].push({
+        userId,
+        username: voteInfo.username || `用户_${userId.slice(0, 6)}`,
+        totalVotes: voteInfo.totalVotes || 1
+      });
+    }
+  });
+
+  // 自定义选项的投票人
+  Object.entries(userVotes).forEach(([userId, voteInfo]) => {
+    if (voteInfo.choice && votersByChoice[voteInfo.choice] === undefined) {
+      if (!votersByChoice._custom) votersByChoice._custom = [];
+      votersByChoice._custom.push({
+        userId,
+        username: voteInfo.username || `用户_${userId.slice(0, 6)}`,
+        totalVotes: voteInfo.totalVotes || 1
+      });
+    }
+  });
+
+  return (
+    <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <HowToVote sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+          投票记录
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+          {Object.keys(userVotes).length} 人已投票
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {choices.map((choice, idx) => {
+          const voters = votersByChoice[choice] || [];
+          if (voters.length === 0) return null;
+
+          return (
+            <Box key={idx}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.light', fontSize: '0.8rem' }}>
+                  {choice}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={`${voters.length}人`}
+                  sx={{ ml: 0.5, height: 18, fontSize: '0.65rem' }}
+                  color="primary"
+                  variant="outlined"
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {voters.map((voter, vIdx) => (
+                  <Chip
+                    key={vIdx}
+                    size="small"
+                    label={`${voter.username} (${voter.totalVotes}票)`}
+                    sx={{ fontSize: '0.65rem', height: 20 }}
+                    variant="outlined"
+                    color="default"
+                  />
+                ))}
+              </Box>
+            </Box>
+          );
+        })}
+
+        {/* 自定义选项的投票人 */}
+        {votersByChoice._custom && votersByChoice._custom.length > 0 && (
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.light', fontSize: '0.8rem' }}>
+                自定义选项
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {votersByChoice._custom.map((voter, vIdx) => (
+                <Chip
+                  key={vIdx}
+                  size="small"
+                  label={`${voter.username} (${voter.totalVotes}票)`}
+                  sx={{ fontSize: '0.65rem', height: 20 }}
+                  variant="outlined"
+                  color="warning"
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Box>
+    </Paper>
+  );
+};
+
+// 悬浮投票面板组件
+const FloatingVotingPanel = ({
+  choices,
+  votes,
+  isVoting,
+  votingEndTime,
+  formatTime,
+  voteStats,
+  getVotePercentage
+}) => {
+  if (!choices || choices.length === 0) return null;
+
+  const { total, maxChoice } = voteStats;
+
+  return (
+    <Paper
+      elevation={8}
+      sx={{
+        position: 'fixed',
+        bottom: 16,
+        right: 16,
+        width: 300,
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        p: 1.5,
+        bgcolor: 'rgba(20, 20, 35, 0.95)',
+        border: '1px solid rgba(102, 126, 234, 0.3)',
+        borderRadius: 2,
+        zIndex: 1200,
+        backdropFilter: 'blur(8px)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <HowToVote sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flex: 1 }}>
+          投票
+        </Typography>
+        {isVoting && formatTime && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Timer sx={{ fontSize: 14, color: 'primary.main' }} />
+            <CountdownTimer
+              votingEndTime={votingEndTime}
+              formatTime={formatTime}
+              variant="body2"
+              color="primary.main"
+            />
+          </Box>
+        )}
+        <Chip
+          size="small"
+          label={`${total || 0} 票`}
+          color="primary"
+          variant="outlined"
+          sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+        />
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        {choices.map((choice, index) => {
+          const voteCount = votes[choice] || 0;
+          const percentage = getVotePercentage(choice);
+          const isLeading = choice === maxChoice && total > 0;
+
+          return (
+            <Paper
+              key={index}
+              sx={{
+                p: 0.5,
+                position: 'relative',
+                overflow: 'hidden',
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                border: isLeading ? BORDER_COLORS.leading : BORDER_COLORS.default,
+                borderRadius: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: '100%',
+                  width: `${percentage}%`,
+                  bgcolor: isLeading ? VOTE_BAR_COLORS.leading : VOTE_BAR_COLORS.default,
+                  transition: 'width 0.5s ease-in-out',
+                  zIndex: 0
+                }}
+              />
+              <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1 }}>
+                  {isLeading && (
+                    <EmojiEvents sx={{ fontSize: 14, color: 'success.main' }} />
+                  )}
+                  <Typography variant="body2" sx={{ fontWeight: isLeading ? 'bold' : 'normal', fontSize: '0.8rem' }}>
+                    {choice}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  {voteCount}票 ({percentage.toFixed(1)}%)
+                </Typography>
+              </Box>
+            </Paper>
+          );
+        })}
+      </Box>
+    </Paper>
+  );
+};
+
 // 辅助组件：Skeleton - 独立提取
 const LoadingSkeleton = ({ variant = 'text', width = '100%', height = 24 }) => (
   <Box
@@ -185,6 +414,7 @@ const CompactStoryDisplay = ({
   isLoading,
   choices = [],
   votes = {},
+  userVotes = {},
   isVoting,
   isGenerating,
   votingEndTime,
@@ -300,6 +530,19 @@ const CompactStoryDisplay = ({
     }
     return { top: 0, height: 0 };
   }, []);
+
+  // 跳转到最新一段故事的开头（立即跳转）
+  const jumpToLatestParagraph = useCallback(() => {
+    const state = scrollStateRef.current;
+    if (!state.isAutoScrollEnabled) return;
+
+    const totalParagraphs = allStories.length;
+    if (totalParagraphs === 0) return;
+
+    // 跳转到最后一段（最新一段）的开头
+    const startPos = getParagraphPosition(totalParagraphs - 1);
+    window.scrollTo({ top: startPos.top, behavior: 'instant' });
+  }, [allStories.length, getParagraphPosition]);
 
   // 停止所有滚动定时器和动画
   const stopAllTimers = useCallback(() => {
@@ -422,12 +665,12 @@ const CompactStoryDisplay = ({
       stopAllTimers();
 
       state.jumpBackTimer = setTimeout(() => {
-        executeScrollCycle();
+        jumpToLatestParagraph();
       }, 300);
     } else if (currentLength > 0) {
       state.lastStoryLength = currentLength;
     }
-  }, [allStories, stopAllTimers, executeScrollCycle]);
+  }, [allStories, stopAllTimers, jumpToLatestParagraph]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -697,8 +940,8 @@ const CompactStoryDisplay = ({
       {/* 当前故事 */}
       {currentStory ? renderCurrentStoryWithImages : null}
 
-      {/* 投票面板 */}
-      {currentStory && renderCompactVotingPanel}
+      {/* 投票记录（原投票面板位置） */}
+      {currentStory && isVoting && <VoterRecordList choices={choices} userVotes={userVotes} />}
 
       {/* AI生成中提示 */}
       {currentStory && isGenerating && (
@@ -792,6 +1035,7 @@ const NovelLive = () => {
             isLoading={!novelState.currentStory}
             choices={novelState.choices || []}
             votes={novelState.votes || {}}
+            userVotes={novelState.userVotes || {}}
             isVoting={novelState.isVoting}
             isGenerating={novelState.isGenerating}
             votingEndTime={novelState.votingEndTime}
@@ -799,6 +1043,28 @@ const NovelLive = () => {
             formatTime={formatTime}
             connected={connected}
             currentImages={novelState.currentImages || []}
+          />
+        )}
+
+        {/* 悬浮投票面板 */}
+        {connected && !isJoiningRoom && novelState && novelState.isVoting && (
+          <FloatingVotingPanel
+            choices={novelState.choices || []}
+            votes={novelState.votes || {}}
+            isVoting={novelState.isVoting}
+            votingEndTime={novelState.votingEndTime}
+            formatTime={formatTime}
+            voteStats={{
+              total: getTotalVotes(),
+              maxChoice: Object.entries(novelState.votes || {}).reduce((max, [choice, count]) =>
+                (novelState.votes[max] || 0) > count ? max : choice, Object.keys(novelState.votes || {})[0] || ''),
+              maxVotes: Math.max(0, ...Object.values(novelState.votes || {}))
+            }}
+            getVotePercentage={(choice) => {
+              const total = getTotalVotes();
+              const choiceVotes = novelState.votes?.[choice] || 0;
+              return total > 0 ? (choiceVotes / total) * 100 : 0;
+            }}
           />
         )}
 
