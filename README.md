@@ -403,3 +403,5 @@ CMD ["npm", "start"]
 
 如需关闭测试模式：修改三处if else
 如需部署：修改两处getlocalip
+
+log重置问题，保存重启后bug，弹幕说明，自动滚动查看

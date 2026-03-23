@@ -13,15 +13,11 @@ class HtmlLogger {
   }
 
   /**
-   * 初始化日志文件，创建基础HTML结构
+   * 获取基础HTML模板
+   * @returns {string} HTML模板字符串
    */
-  initializeLogFile() {
-    const logDir = path.dirname(this.logFilePath);
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-
-    const htmlContent = `<!DOCTYPE html>
+  getBaseHtmlTemplate() {
+    return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -114,8 +110,24 @@ class HtmlLogger {
     </script>
 </body>
 </html>`;
+  }
 
-    fs.writeFileSync(this.logFilePath, htmlContent, 'utf8');
+  /**
+   * 初始化日志文件，创建基础HTML结构
+   * 如果日志文件已存在，则保留现有内容（从已有房间恢复时）
+   */
+  initializeLogFile() {
+    const logDir = path.dirname(this.logFilePath);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    // 如果日志文件已存在，保留现有内容
+    if (fs.existsSync(this.logFilePath)) {
+      return;
+    }
+
+    fs.writeFileSync(this.logFilePath, this.getBaseHtmlTemplate(), 'utf8');
   }
 
   /**
@@ -128,17 +140,22 @@ class HtmlLogger {
     const timestamp = new Date().toLocaleString('zh-CN');
     const logEntry = this.createLogEntry(type, content, data, timestamp);
     
-    // 读取现有内容
     let existingContent = '';
     if (fs.existsSync(this.logFilePath)) {
       existingContent = fs.readFileSync(this.logFilePath, 'utf8');
+    } else {
+      // 文件不存在，初始化基础HTML模板
+      existingContent = this.getBaseHtmlTemplate();
     }
     
-    // 在 </div> 标签前插入新日志
+    // 在 </div> 标签前插入新日志（logs-container 的结束标签）
     const insertPosition = existingContent.lastIndexOf('</div>');
     if (insertPosition !== -1) {
       const newContent = existingContent.slice(0, insertPosition) + logEntry + existingContent.slice(insertPosition);
       fs.writeFileSync(this.logFilePath, newContent, 'utf8');
+    } else {
+      // 如果找不到插入位置，直接追加到文件末尾
+      fs.appendFileSync(this.logFilePath, logEntry, 'utf8');
     }
   }
 

@@ -317,12 +317,6 @@ const CompactStoryDisplay = ({
           </Box>
         </Box>
 
-        {!isVoting && (
-          <Typography variant="caption" color="warning.main" sx={{ display: 'block', mb: 1, textAlign: 'center' }}>
-            故事生成中，请稍等片刻...
-          </Typography>
-        )}
-
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           {choices.map((choice, index) => {
             const voteCount = votes[choice] || 0;

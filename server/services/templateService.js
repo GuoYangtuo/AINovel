@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const TEMPLATES_FILE = path.join(__dirname, '../data/novel-templates.json');
 
@@ -180,9 +181,11 @@ class TemplateService {
     const { promptTemplate, characters, worldSetting } = roomData;
     const formattedCharacters = this.formatCharactersForAI(characters);
     
-    // 格式化故事历史
+    // 格式化故事历史（只取最近N段）
+    const historyLimit = parseInt(process.env.STORY_HISTORY_LIMIT) || 10;
     let pastStory = '';
-    storyHistory.forEach(element => {
+    const recentHistory = storyHistory.slice(-historyLimit);
+    recentHistory.forEach(element => {
       pastStory += element.story + '\n\n' + '主人公选择了：' + element.winningChoice + '\n\n';
     });
 
@@ -202,8 +205,10 @@ class TemplateService {
           ?.replace('{characters}', JSON.stringify(formattedCharacters, null, 2))
           ?.replace('{worldSetting}', JSON.stringify(templateData.worldSetting || {}, null, 2)) || '';
       } else {
+        const historyLimit = parseInt(process.env.STORY_HISTORY_LIMIT) || 10;
         let pastStory = '';
-        storyHistory.forEach(element => {
+        const recentHistory = storyHistory.slice(-historyLimit);
+        recentHistory.forEach(element => {
           pastStory += element.story + '\n\n' + '主人公选择了：' + element.winningChoice + '\n\n';
         });
 

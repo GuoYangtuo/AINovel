@@ -88,11 +88,19 @@ class NovelRoomManager {
           
           // 如果房间之前正在投票，需要重启投票计时器
           if (room.roomState.isActive && room.votingManager.votingState.isVoting) {
+            // 计算剩余时间
+            const votingEndTime = room.votingManager.votingState.votingEndTime;
+            const remainingTime = votingEndTime ? Math.max(0, votingEndTime - Date.now()) : 0;
+            
+            // 如果剩余时间已过或无效，使用默认投票时间
+            const VOTING_DURATION = room.templateData?.settings?.votingDuration || (1 * 60 * 1000);
+            const effectiveDuration = remainingTime > 0 ? remainingTime : VOTING_DURATION;
+            
             // 重启投票计时器
-            room.votingManager.startVotingTimer(room.templateData.votingTime, (result) => {
+            room.votingManager.startVotingTimer(effectiveDuration, (result) => {
               return room.processVotingResult(result);
             });
-            console.log(`房间 ${room.roomId} 投票计时器已重启，剩余时间: ${Math.floor(remainingTime / 1000)}秒`);
+            console.log(`房间 ${room.roomId} 投票计时器已重启，剩余时间: ${Math.floor(effectiveDuration / 1000)}秒`);
           }
           
           successCount++;
