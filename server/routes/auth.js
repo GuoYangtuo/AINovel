@@ -51,6 +51,7 @@ router.post('/register', async (req, res) => {
       username,
       password: hashedPassword,
       coins: 1000, // 新用户默认1000金币
+      role: 'user', // 默认角色
       createdAt: new Date().toISOString()
     };
     
@@ -58,12 +59,12 @@ router.post('/register', async (req, res) => {
     writeUsers(users);
     
     // 生成 JWT token
-    const token = jwt.sign({ userId: newUser.id, username }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ userId: newUser.id, username, role: 'user' }, JWT_SECRET, { expiresIn: '24h' });
     
     res.status(201).json({
       message: '注册成功',
       token,
-      user: { id: newUser.id, username, theme: 'default', coins: newUser.coins }
+      user: { id: newUser.id, username, theme: 'default', coins: newUser.coins, role: 'user' }
     });
     
   } catch (error) {
@@ -96,12 +97,12 @@ router.post('/login', async (req, res) => {
     }
     
     // 生成 JWT token
-    const token = jwt.sign({ userId: user.id, username }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ userId: user.id, username, role: user.role || 'user' }, JWT_SECRET, { expiresIn: '24h' });
     
     res.json({
       message: '登录成功',
       token,
-      user: { id: user.id, username, theme: user.theme || 'default', coins: user.coins || 0 }
+      user: { id: user.id, username, theme: user.theme || 'default', coins: user.coins || 0, role: user.role || 'user' }
     });
     
   } catch (error) {
@@ -152,7 +153,8 @@ router.put('/update-settings', authenticateToken, async (req, res) => {
         username: users[userIndex].username,
         email: users[userIndex].email,
         theme: users[userIndex].theme || 'default',
-        coins: users[userIndex].coins || 0
+        coins: users[userIndex].coins || 0,
+        role: users[userIndex].role || 'user'
       }
     });
     

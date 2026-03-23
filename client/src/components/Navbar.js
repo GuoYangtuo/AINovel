@@ -23,7 +23,8 @@ import {
   ArrowBack,
   Add,
   Settings,
-  MonetizationOn
+  MonetizationOn,
+  AdminPanelSettings
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -93,6 +94,11 @@ const Navbar = ({
     if (onOpenRecharge) {
       onOpenRecharge();
     }
+  };
+
+  const handleGoToAdmin = () => {
+    handleUserMenuClose();
+    navigate('/admin');
   };
 
   const defaultStyle = {
@@ -201,6 +207,14 @@ const Navbar = ({
             </ListItemIcon>
             <ListItemText primary="用户设置" />
           </MenuItem>
+          {user?.role === 'admin' && (
+            <MenuItem onClick={handleGoToAdmin}>
+              <ListItemIcon>
+                <AdminPanelSettings sx={{ color: '#ff9800' }} />
+              </ListItemIcon>
+              <ListItemText primary="管理面板" sx={{ color: '#ff9800', fontWeight: 'bold' }} />
+            </MenuItem>
+          )}
         </Menu>
       )}
 

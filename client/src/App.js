@@ -10,6 +10,7 @@ import NovelLive from './components/NovelLive';
 import HomePage from './components/HomePage';
 import CreateRoom from './components/CreateRoom';
 import UserSettings from './components/UserSettings';
+import AdminDashboard from './components/Admin/AdminDashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { CustomThemeProvider } from './contexts/ThemeContext';
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/novel-live/:roomId" element={<NovelLive />} />
         <Route path="/create-room" element={<CreateRoom />} />
         <Route path="/settings" element={<UserSettings />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/" element={<HomePage />} />
       </Routes>
     );
@@ -59,6 +61,7 @@ function AppRoutes() {
       <Route path="/novel-live/:roomId" element={<NovelLive />} />
       <Route path="/create-room" element={user ? <CreateRoom /> : <Navigate to="/login" />} />
       <Route path="/settings" element={user ? <UserSettings /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
       <Route path="/" element={user ? <HomePage /> : <Navigate to="/login" />} />
     </Routes>
   );

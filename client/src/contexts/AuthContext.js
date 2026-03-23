@@ -38,7 +38,8 @@ export const AuthProvider = ({ children }) => {
       const debugUser = {
         userId: `debug_${deviceId}`,
         username: `测试用户_${deviceId.substring(0, 6)}`,
-        coins: 1000 // 调试模式下的初始金币
+        coins: 1000, // 调试模式下的初始金币
+        role: 'admin' // 调试模式下默认 admin 方便测试
       };
       
       setToken('debug');
@@ -54,8 +55,13 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     
     if (savedToken && savedUser) {
+      const savedUserData = JSON.parse(savedUser);
+      // 向后兼容：确保 role 字段存在
+      if (!savedUserData.role) {
+        savedUserData.role = 'user';
+      }
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      setUser(savedUserData);
       axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
     }
     setLoading(false);
@@ -69,15 +75,17 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { token: newToken, user: newUser } = response.data;
-      
+      // 向后兼容：确保 role 字段存在
+      const userWithRole = { ...newUser, role: newUser.role || 'user' };
+
       setToken(newToken);
-      setUser(newUser);
-      
+      setUser(userWithRole);
+
       localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      
+      localStorage.setItem('user', JSON.stringify(userWithRole));
+
       axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      
+
       toast.success('登录成功！');
       return { success: true };
       

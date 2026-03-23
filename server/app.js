@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const authRoutes = require('./routes/auth');
 const templateRoutes = require('./routes/templates');
+const adminRoutes = require('./routes/admin');
 const ttsService = require('./services/ttsService');
 const { 
   initializeNovel, 
@@ -58,6 +59,7 @@ app.use('/audio', express.static(path.join(__dirname, 'public/audio')));
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 获取所有活跃小说列表的API
 app.get('/api/novels', (req, res) => {
