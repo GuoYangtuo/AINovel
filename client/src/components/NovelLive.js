@@ -24,6 +24,18 @@ import {
 import { useSocket } from '../contexts/SocketContext';
 import CountdownTimer from './NovelComponents/CountdownTimer';
 
+// 自动循环滚动配置 - 可在此处调整参数
+const SCROLL_CONFIG = {
+  // 循环展示最后几段故事（设为1则只循环展示最新段落）
+  lastNParagraphs: 3,
+  // 滚动速度（像素/秒），值越大滚动越快
+  scrollSpeed: 10,
+  // 到底后停留时间（毫秒）
+  pauseAtBottom: 1500,
+  // 切换循环滚动的按键（支持 'Space', 'KeyS', 'KeyL' 等）
+  toggleKey: 'Space'
+};
+
 // 常量提取
 const STYLES = {
   compact: {
@@ -179,8 +191,251 @@ const CompactStoryDisplay = ({
   totalVotes,
   formatTime,
   connected,
-  currentImages = []
+  currentImages = [],
+  scrollConfig = {}
 }) => {
+  // 滚动配置（允许外部覆盖默认值）
+  const config = { ...SCROLL_CONFIG, ...scrollConfig };
+
+  // 内部滚动状态 ref
+  const scrollStateRef = useRef({
+    isScrolling: false,
+    isAutoScrollEnabled: false,
+    scrollTimer: null,
+    jumpBackTimer: null,
+    pauseTimer: null,
+    currentScrollTarget: null,
+    lastStoryLength: 0,
+    animationFrameId: null
+  });
+
+  // 获取所有故事段落（历史 + 当前）
+  const allStories = useMemo(() => {
+    return [...storyHistory, { story: currentStory, isCurrent: true }].filter(s => s.story);
+  }, [storyHistory, currentStory]);
+
+  // 获取用于循环的目标故事索引范围
+  const getScrollTargetStories = useCallback(() => {
+    const totalStories = allStories.length;
+    const { lastNParagraphs } = config;
+    const startIdx = Math.max(0, totalStories - lastNParagraphs);
+    return allStories.slice(startIdx);
+  }, [allStories, config.lastNParagraphs]);
+
+  // 匀速滚动到目标位置（使用窗口滚动）
+  const linearScrollTo = useCallback((targetY) => {
+    return new Promise((resolve) => {
+      const startY = window.scrollY;
+      const totalDistance = targetY - startY;
+
+      // 如果已经在目标位置附近，直接返回
+      if (Math.abs(totalDistance) <= 1) {
+        resolve();
+        return;
+      }
+
+      const { scrollSpeed } = config;
+
+      // 累积已移动的距离
+      let accumulatedDistance = 0;
+      let lastTime = null;
+
+      const animateScroll = (currentTime) => {
+        // 检查是否已被停止
+        if (!scrollStateRef.current.isAutoScrollEnabled) {
+          resolve();
+          return;
+        }
+
+        if (lastTime === null) {
+          lastTime = currentTime;
+        }
+
+        const elapsed = currentTime - lastTime;
+        lastTime = currentTime;
+
+        // 根据速度计算本帧移动距离
+        const pixelsToMove = (scrollSpeed * elapsed) / 1000;
+        accumulatedDistance += pixelsToMove;
+
+        const newScrollTop = startY + accumulatedDistance;
+
+        // 判断是否到达目标
+        if (totalDistance > 0 && newScrollTop >= targetY) {
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+          resolve();
+          return;
+        } else if (totalDistance < 0 && newScrollTop <= targetY) {
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+          resolve();
+          return;
+        }
+
+        window.scrollTo({ top: newScrollTop, behavior: 'instant' });
+
+        // 使用累积距离判断
+        if (Math.abs(accumulatedDistance) < Math.abs(totalDistance)) {
+          scrollStateRef.current.animationFrameId = requestAnimationFrame(animateScroll);
+        } else {
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+          resolve();
+        }
+      };
+
+      scrollStateRef.current.animationFrameId = requestAnimationFrame(animateScroll);
+    });
+  }, [config.scrollSpeed]);
+
+  // 计算目标段落在页面内的位置
+  const getParagraphPosition = useCallback((paragraphIndex) => {
+    const paragraphs = document.querySelectorAll('[data-paragraph-index]');
+    const targetEl = paragraphs[paragraphIndex];
+
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      return {
+        top: rect.top + window.scrollY,
+        height: rect.height
+      };
+    }
+    return { top: 0, height: 0 };
+  }, []);
+
+  // 停止所有滚动定时器和动画
+  const stopAllTimers = useCallback(() => {
+    const state = scrollStateRef.current;
+    if (state.scrollTimer) {
+      clearTimeout(state.scrollTimer);
+      state.scrollTimer = null;
+    }
+    if (state.jumpBackTimer) {
+      clearTimeout(state.jumpBackTimer);
+      state.jumpBackTimer = null;
+    }
+    if (state.pauseTimer) {
+      clearTimeout(state.pauseTimer);
+      state.pauseTimer = null;
+    }
+    if (state.animationFrameId) {
+      cancelAnimationFrame(state.animationFrameId);
+      state.animationFrameId = null;
+    }
+    state.isScrolling = false;
+  }, []);
+
+  // 执行一轮循环滚动
+  const executeScrollCycle = useCallback(async () => {
+    const state = scrollStateRef.current;
+    if (!state.isAutoScrollEnabled) return;
+
+    const targetStories = getScrollTargetStories();
+    if (targetStories.length === 0) return;
+
+    state.isScrolling = true;
+    const totalParagraphs = allStories.length;
+    const startIdx = totalParagraphs - targetStories.length;
+
+    // 跳转到倒数第N段的开头（立即跳转）
+    const startPos = getParagraphPosition(startIdx);
+    window.scrollTo({ top: startPos.top, behavior: 'instant' });
+
+    // 等待一小段时间让用户看到起点
+    await new Promise(resolve => {
+      state.pauseTimer = setTimeout(resolve, 500);
+    });
+    if (!state.isAutoScrollEnabled) return;
+
+    // 滚动到底部（使用匀速滚动）
+    const scrollHeight = document.body.scrollHeight;
+    const clientHeight = window.innerHeight;
+    const targetY = scrollHeight - clientHeight;
+    await linearScrollTo(targetY);
+
+    if (!state.isAutoScrollEnabled) return;
+
+    // 到底后停留
+    await new Promise(resolve => {
+      state.pauseTimer = setTimeout(resolve, config.pauseAtBottom);
+    });
+
+    if (state.isAutoScrollEnabled) {
+      // 继续下一轮
+      state.scrollTimer = setTimeout(() => {
+        executeScrollCycle();
+      }, 100);
+    }
+  }, [allStories.length, getScrollTargetStories, getParagraphPosition, linearScrollTo, config]);
+
+  // 开启自动循环滚动
+  const startAutoScroll = useCallback(() => {
+    const state = scrollStateRef.current;
+    if (state.isAutoScrollEnabled) return;
+
+    stopAllTimers();
+    state.isAutoScrollEnabled = true;
+
+    executeScrollCycle();
+  }, [stopAllTimers, executeScrollCycle]);
+
+  // 停止自动循环滚动
+  const stopAutoScroll = useCallback(() => {
+    const state = scrollStateRef.current;
+    stopAllTimers();
+    state.isAutoScrollEnabled = false;
+  }, [stopAllTimers]);
+
+  // 切换自动滚动状态
+  const toggleAutoScroll = useCallback(() => {
+    const state = scrollStateRef.current;
+    if (state.isAutoScrollEnabled) {
+      console.log('停止自动滚动');
+      stopAutoScroll();
+    } else {
+      console.log('开始自动滚动');
+      startAutoScroll();
+    }
+  }, [startAutoScroll, stopAutoScroll]);
+
+  // 监听键盘事件
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === config.toggleKey) {
+        e.preventDefault();
+        toggleAutoScroll();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleAutoScroll, config.toggleKey]);
+
+  // 检测故事变化（用于新段落生成时自动跳转）
+  useEffect(() => {
+    const state = scrollStateRef.current;
+    const currentLength = allStories.length;
+
+    if (currentLength > state.lastStoryLength && state.isAutoScrollEnabled) {
+      state.lastStoryLength = currentLength;
+
+      stopAllTimers();
+
+      state.jumpBackTimer = setTimeout(() => {
+        executeScrollCycle();
+      }, 300);
+    } else if (currentLength > 0) {
+      state.lastStoryLength = currentLength;
+    }
+  }, [allStories, stopAllTimers, executeScrollCycle]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      stopAllTimers();
+    };
+  }, [stopAllTimers]);
+
   // 使用 useMemo 缓存图片映射 - 避免重复创建
   const currentImageMap = useMemo(() => createImageMap(currentImages), [currentImages]);
 
@@ -253,7 +508,7 @@ const CompactStoryDisplay = ({
     if (!currentStory) return null;
 
     return (
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2 }} data-paragraph-index={storyHistory.length}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
           <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold' }}>
             第 {storyHistory.length + 1} 段故事 (最新)
@@ -375,7 +630,7 @@ const CompactStoryDisplay = ({
       const hasImages = historyItem.images && historyItem.images.length > 0;
 
       return (
-        <Box key={index} sx={{ mb: 1.5 }}>
+        <Box key={index} data-paragraph-index={index} sx={{ mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.7 }}>
               第 {index + 1} 段故事
@@ -408,6 +663,8 @@ const CompactStoryDisplay = ({
       );
     });
   }, [storyHistory, formatCompactStoryText, renderStoryContent, renderVotingResult]);
+
+  const scrollState = scrollStateRef.current;
 
   // 加载状态渲染
   if (isLoading) {
