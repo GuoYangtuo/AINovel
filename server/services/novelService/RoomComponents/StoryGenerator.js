@@ -127,21 +127,42 @@ class StoryGenerator {
     try {
       const parts = response.split('[');
       if (parts.length < 2) {
-        throw new Error('回答格式不正确：缺少选项部分\n${response}');
+        throw new Error(`回答格式不正确：缺少选项部分\n${response}`);
       }
       
       const story = parts[0].trim();
       if (!story) {
-        throw new Error('回答格式不正确：故事内容为空\n${response}');
+        throw new Error(`回答格式不正确：故事内容为空\n${response}`);
       }
       
-      const choicesStr = '[' + parts[1];
+      let choicesStr = '[' + parts.slice(1).join('[');
+      
       let choices;
       
+      // 第一次尝试：直接解析
       try {
         choices = JSON.parse(choicesStr);
       } catch (parseError) {
-        throw new Error(`回答格式不正确：选项JSON解析失败 - ${parseError.message}\n${response}`);
+        // 第二次尝试：处理多行格式 ["xxx"] ["yyy"] ["zzz"]
+        // 将所有独立的 ["..."] 项提取出来，合并成一个数组
+        const multiLinePattern = /\"([^\"]+)\"/g;
+        const matches = [];
+        let match;
+        while ((match = multiLinePattern.exec(choicesStr)) !== null) {
+          matches.push(match[1]);
+        }
+        
+        // 如果提取到了多个选项，尝试构建标准JSON数组
+        if (matches.length > 0) {
+          const standardJson = '[' + matches.map(m => `"${m}"`).join(',') + ']';
+          try {
+            choices = JSON.parse(standardJson);
+          } catch (standardParseError) {
+            throw new Error(`回答格式不正确：选项JSON解析失败 - ${parseError.message}\n${response}`);
+          }
+        } else {
+          throw new Error(`回答格式不正确：选项JSON解析失败 - ${parseError.message}\n${response}`);
+        }
       }
       
       if (!Array.isArray(choices) || choices.length === 0) {
@@ -180,6 +201,9 @@ class StoryGenerator {
           }
         });
       }
+
+      // 不再生成图片，直接返回故事和选项
+      return { story, choices, audioUrl: null };
       
       // 异步生成图片提示词和图片（不阻塞主流程）
       setImmediate(async () => {
