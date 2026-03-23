@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Container,
@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   Timer
 } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 import { useSocket } from '../contexts/SocketContext';
 import CountdownTimer from './NovelComponents/CountdownTimer';
 
@@ -29,9 +30,9 @@ const SCROLL_CONFIG = {
   // 循环展示最后几段故事（设为1则只循环展示最新段落）
   lastNParagraphs: 3,
   // 滚动速度（像素/秒），值越大滚动越快
-  scrollSpeed: 10,
+  scrollSpeed: 8,
   // 到底后停留时间（毫秒）
-  pauseAtBottom: 1500,
+  pauseAtBottom: 10000,
   // 切换循环滚动的按键（支持 'Space', 'KeyS', 'KeyL' 等）
   toggleKey: 'Space'
 };
@@ -504,7 +505,9 @@ const CompactStoryDisplay = ({
   formatTime,
   connected,
   currentImages = [],
-  scrollConfig = {}
+  scrollConfig = {},
+  inlineVotingPanelRef,
+  isInlinePanelVisible
 }) => {
   // 滚动配置（允许外部覆盖默认值）
   const config = { ...SCROLL_CONFIG, ...scrollConfig };
@@ -535,13 +538,13 @@ const CompactStoryDisplay = ({
   }, [allStories, config.lastNParagraphs]);
 
   // 匀速滚动到目标位置（使用窗口滚动）
-  const linearScrollTo = useCallback((targetY) => {
+  const linearScrollTo = useCallback((initialTargetY) => {
     return new Promise((resolve) => {
       const startY = window.scrollY;
-      const totalDistance = targetY - startY;
+      const initialDistance = initialTargetY - startY;
 
       // 如果已经在目标位置附近，直接返回
-      if (Math.abs(totalDistance) <= 1) {
+      if (Math.abs(initialDistance) <= 1) {
         resolve();
         return;
       }
@@ -570,26 +573,27 @@ const CompactStoryDisplay = ({
         const pixelsToMove = (scrollSpeed * elapsed) / 1000;
         accumulatedDistance += pixelsToMove;
 
+        // 动态计算目标Y位置（适应内容变化）
+        const currentScrollHeight = document.body.scrollHeight;
+        const currentClientHeight = window.innerHeight;
+        const currentTargetY = currentScrollHeight - currentClientHeight;
+
         const newScrollTop = startY + accumulatedDistance;
 
-        // 判断是否到达目标
-        if (totalDistance > 0 && newScrollTop >= targetY) {
-          window.scrollTo({ top: targetY, behavior: 'instant' });
-          resolve();
-          return;
-        } else if (totalDistance < 0 && newScrollTop <= targetY) {
-          window.scrollTo({ top: targetY, behavior: 'instant' });
+        // 判断是否到达目标（动态比较）
+        if (newScrollTop >= currentTargetY) {
+          window.scrollTo({ top: currentTargetY, behavior: 'instant' });
           resolve();
           return;
         }
 
         window.scrollTo({ top: newScrollTop, behavior: 'instant' });
 
-        // 使用累积距离判断
-        if (Math.abs(accumulatedDistance) < Math.abs(totalDistance)) {
+        // 使用累积距离判断是否完成
+        if (accumulatedDistance < initialDistance) {
           scrollStateRef.current.animationFrameId = requestAnimationFrame(animateScroll);
         } else {
-          window.scrollTo({ top: targetY, behavior: 'instant' });
+          window.scrollTo({ top: currentTargetY, behavior: 'instant' });
           resolve();
         }
       };
@@ -653,30 +657,53 @@ const CompactStoryDisplay = ({
     const state = scrollStateRef.current;
     if (!state.isAutoScrollEnabled) return;
 
-    const targetStories = getScrollTargetStories();
-    if (targetStories.length === 0) return;
-
     state.isScrolling = true;
-    const totalParagraphs = allStories.length;
-    const startIdx = totalParagraphs - targetStories.length;
 
-    // 跳转到倒数第N段的开头（立即跳转）
-    const startPos = getParagraphPosition(startIdx);
-    window.scrollTo({ top: startPos.top, behavior: 'instant' });
+    // 从当前位置开始，持续向下滚动到底部
+    const scrollDown = async () => {
+      while (state.isAutoScrollEnabled) {
+        const currentScrollHeight = document.body.scrollHeight;
+        const currentClientHeight = window.innerHeight;
+        const currentTargetY = currentScrollHeight - currentClientHeight;
+        const currentY = window.scrollY;
 
-    // 等待一小段时间让用户看到起点
-    await new Promise(resolve => {
-      state.pauseTimer = setTimeout(resolve, 500);
-    });
+        // 已经到底了
+        if (currentY >= currentTargetY - 5) {
+          break;
+        }
+
+        // 动态滚动到最新底部
+        await linearScrollTo(currentTargetY);
+
+        if (!state.isAutoScrollEnabled) break;
+      }
+    };
+
+    await scrollDown();
+
     if (!state.isAutoScrollEnabled) return;
 
-    // 滚动到底部（使用匀速滚动）
-    const scrollHeight = document.body.scrollHeight;
-    const clientHeight = window.innerHeight;
-    const targetY = scrollHeight - clientHeight;
-    await linearScrollTo(targetY);
+    // 到底后显示toast提醒，实时倒计时
+    const pauseSeconds = Math.round(config.pauseAtBottom / 1000);
+    const targetParagraph = allStories.length - config.lastNParagraphs + 1;
+    const startIdx = Math.max(0, allStories.length - config.lastNParagraphs);
 
-    if (!state.isAutoScrollEnabled) return;
+    toast(
+      `已到页面底部，${pauseSeconds}秒后跳转回第${targetParagraph}段故事`,
+      {
+        duration: config.pauseAtBottom + 1000,
+        icon: '📖',
+        style: {
+          background: 'rgba(30, 30, 50, 0.95)',
+          color: '#fff',
+          border: '1px solid rgba(102, 126, 234, 0.3)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          fontSize: '14px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+        }
+      }
+    );
 
     // 到底后停留
     await new Promise(resolve => {
@@ -684,12 +711,16 @@ const CompactStoryDisplay = ({
     });
 
     if (state.isAutoScrollEnabled) {
-      // 继续下一轮
+      // 跳转到倒数第N段故事的开头位置
+      const startPos = getParagraphPosition(startIdx);
+      window.scrollTo({ top: startPos.top, behavior: 'instant' });
+
+      // 短暂延迟后继续下一轮
       state.scrollTimer = setTimeout(() => {
         executeScrollCycle();
       }, 100);
     }
-  }, [allStories.length, getScrollTargetStories, getParagraphPosition, linearScrollTo, config]);
+  }, [linearScrollTo, config.pauseAtBottom, config.lastNParagraphs, allStories.length, getParagraphPosition]);
 
   // 开启自动循环滚动
   const startAutoScroll = useCallback(() => {
@@ -862,8 +893,8 @@ const CompactStoryDisplay = ({
     );
   }, [currentStory, storyHistory.length, isGenerating, isVoting, currentImages, currentImageMap, renderStoryContent]);
 
-  // 渲染紧凑型投票选项（只展示，无交互）- 使用 useMemo 缓存
-  const renderCompactVotingPanel = useMemo(() => {
+  // 渲染紧凑型投票选项（只展示，无交互）
+  const renderCompactVotingPanelContent = () => {
     if (!choices || choices.length === 0) return null;
 
     const { total, maxChoice } = voteStats;
@@ -946,7 +977,7 @@ const CompactStoryDisplay = ({
         </Box>
       </Paper>
     );
-  }, [choices, votes, isVoting, formatTime, votingEndTime, voteStats, getVotePercentage]);
+  };
 
   // 渲染历史故事项 - 使用 useMemo 缓存
   const renderHistoryItems = useMemo(() => {
@@ -1022,6 +1053,13 @@ const CompactStoryDisplay = ({
       {/* 当前故事 */}
       {currentStory ? renderCurrentStoryWithImages : null}
 
+      {/* 内嵌投票面板 - 位于投票记录上方，带ref用于检测可见性 */}
+      {currentStory && isVoting && choices && choices.length > 0 && (
+        <Box ref={inlineVotingPanelRef}>
+          {renderCompactVotingPanelContent()}
+        </Box>
+      )}
+
       {/* 投票记录（原投票面板位置） */}
       {currentStory && isVoting && <VoterRecordList choices={choices} userVotes={userVotes} />}
 
@@ -1044,6 +1082,45 @@ const NovelLive = () => {
   const { connected, novelState, currentRoomId, isJoiningRoom, joinRoom } = useSocket();
   const { roomId } = useParams();
   const hasJoinedRoom = useRef(false);
+
+  // 内嵌投票面板ref，用于检测是否在屏幕可见范围内
+  const inlineVotingPanelRef = useRef(null);
+  const [isInlinePanelVisible, setIsInlinePanelVisible] = useState(false);
+
+  // 检测内嵌投票面板是否在屏幕可见范围内
+  useEffect(() => {
+    if (!novelState?.isVoting || !inlineVotingPanelRef.current) {
+      setIsInlinePanelVisible(false);
+      return;
+    }
+
+    const checkInlinePanelVisibility = () => {
+      const panel = inlineVotingPanelRef.current;
+      if (!panel) {
+        setIsInlinePanelVisible(false);
+        return;
+      }
+
+      const rect = panel.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      // 判断面板是否在屏幕可见范围内（至少有一部分在视口中）
+      const isVisible = rect.top < viewportHeight && rect.bottom > 0;
+      setIsInlinePanelVisible(isVisible);
+    };
+
+    // 初始检测
+    checkInlinePanelVisibility();
+
+    // 监听滚动事件
+    window.addEventListener('scroll', checkInlinePanelVisibility, { passive: true });
+    window.addEventListener('resize', checkInlinePanelVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', checkInlinePanelVisibility);
+      window.removeEventListener('resize', checkInlinePanelVisibility);
+    };
+  }, [novelState?.isVoting]);
 
   // 自动加入房间（只读模式，不需要认证）
   useEffect(() => {
@@ -1125,11 +1202,13 @@ const NovelLive = () => {
             formatTime={formatTime}
             connected={connected}
             currentImages={novelState.currentImages || []}
+            inlineVotingPanelRef={inlineVotingPanelRef}
+            isInlinePanelVisible={isInlinePanelVisible}
           />
         )}
 
-        {/* 悬浮投票面板 */}
-        {connected && !isJoiningRoom && novelState && novelState.isVoting && (
+        {/* 悬浮投票面板 - 仅当内嵌面板不可见时显示 */}
+        {connected && !isJoiningRoom && novelState && novelState.isVoting && !isInlinePanelVisible && (
           <FloatingVotingPanel
             choices={novelState.choices || []}
             votes={novelState.votes || {}}
