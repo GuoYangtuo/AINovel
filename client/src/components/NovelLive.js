@@ -1116,14 +1116,9 @@ const NovelLive = () => {
 
   // 检测内嵌投票面板是否在屏幕可见范围内
   useEffect(() => {
-    if (!novelState?.isVoting || !inlineVotingPanelRef.current) {
-      setIsInlinePanelVisible(false);
-      return;
-    }
-
     const checkInlinePanelVisibility = () => {
       const panel = inlineVotingPanelRef.current;
-      if (!panel) {
+      if (!panel || !novelState?.isVoting) {
         setIsInlinePanelVisible(false);
         return;
       }
@@ -1139,7 +1134,7 @@ const NovelLive = () => {
     // 初始检测
     checkInlinePanelVisibility();
 
-    // 监听滚动事件
+    // 监听滚动和尺寸变化事件
     window.addEventListener('scroll', checkInlinePanelVisibility, { passive: true });
     window.addEventListener('resize', checkInlinePanelVisibility, { passive: true });
 
