@@ -350,6 +350,16 @@ class NovelRoom {
         this.roomState.currentImages
       );
 
+      // 清理上一轮已投票用户的待处理礼物记录（保留未投票的供下一轮使用）
+      try {
+        const { liveBridgeManager } = require('../../liveBridge');
+        if (liveBridgeManager) {
+          liveBridgeManager.cleanupPendingAfterRound(this.roomId, { userVotes });
+        }
+      } catch (e) {
+        // ignore — bridge manager 可能不存在
+      }
+
       // 创建音频准备就绪的回调函数
       const onAudioReady = (audioUrl) => {
         this.roomState.currentAudioUrl = audioUrl;

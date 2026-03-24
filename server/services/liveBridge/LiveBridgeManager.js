@@ -21,8 +21,10 @@ const BiliBiliBridge = require('./BiliBiliBridge');
   /**
    * 待处理的礼物记录
    * @typedef {Object} PendingGift
+   * @property {string} bridgeId - 所属桥接器 ID
    * @property {string} uname - 用户昵称
-   * @property {number} coins - 累计票数（金币换算后）
+   * @property {number} coins - 累计总票数（礼物换算后的总票数）
+   * @property {number} consumedVotes - 已投票消耗的票数
    * @property {Array} gifts - 礼物记录列表
    * @property {number} votingEndTime - 刷礼物时所在投票轮的截止时间，用于检测轮次切换
    */
@@ -263,8 +265,10 @@ class LiveBridgeManager {
       existing.gifts.push({ gift_name, gift_num, votes, time: Date.now() });
     } else {
       this._pendingCoins.set(key, {
+        bridgeId,
         uname,
         coins: votes,
+        consumedVotes: 0,
         gifts: [{ gift_name, gift_num, votes, time: Date.now() }],
         votingEndTime: currentVotingEndTime,
       });
@@ -348,13 +352,14 @@ class LiveBridgeManager {
       console.log(`[LiveBridge] 用户 ${uname} 重复投票相同选项，忽略`);
       return;
     } else {
-      // 首次投票本轮：消耗待处理礼物
+      // 首次投票本轮：使用待处理礼物中尚未消耗的票数
+      const availableVotes = pending.coins - (pending.consumedVotes || 0);
       if (pending.votingEndTime && votingState.votingEndTime !== pending.votingEndTime) {
         // 跨轮：用户上一轮没投票就把礼物留到本轮
-        console.log(`[LiveBridge] 用户 ${uname} 跨轮使用待处理礼物票数=${pending.coins}`);
+        console.log(`[LiveBridge] 用户 ${uname} 跨轮使用待处理礼物票数=${availableVotes}`);
       }
-      votesToAdd = pending.coins;
-      coinsToDeduct = pending.coins;
+      votesToAdd = availableVotes;
+      coinsToDeduct = availableVotes;
     }
 
     if (votesToAdd <= 0) {
@@ -379,14 +384,11 @@ class LiveBridgeManager {
       instance.totalVotes += votesToAdd;
 
       if (coinsToDeduct > 0) {
-        // 投票成功，消费掉本次使用的礼物票数
-        pending.coins -= coinsToDeduct;
-        pending.gifts = []; // 清空礼物记录（已使用）
-
-        // pending.coins 可能还有剩余（如果上一轮遗留），保留到下一轮
-        if (pending.coins <= 0) {
-          this._pendingCoins.delete(key);
-        }
+        // 记录本次消耗的票数（用 consumedVotes 累加，不清空 entry）
+        pending.consumedVotes = (pending.consumedVotes || 0) + coinsToDeduct;
+        // 注意：不主动 delete entry。
+        // 如果 consumedVotes >= coins，则 availableVotes = 0，
+        // 后续弹幕会走"改投"分支（不扣 consumedVotes），保证一轮内多次弹幕均能正常切换选项。
       }
 
       // 广播投票通知
@@ -401,6 +403,7 @@ class LiveBridgeManager {
           votes: votesToAdd,
           giftVotes: coinsToDeduct,
           gifts: pending?.gifts?.length > 0 ? pending.gifts : null,
+          availableVotes: pending ? (pending.coins - (pending.consumedVotes || 0)) : 0,
           timestamp: Date.now(),
         });
       }
@@ -520,6 +523,42 @@ class LiveBridgeManager {
     if (!this._io) return;
     const bridges = this.getBridgesForRoom(novelRoomId);
     this._io.to(novelRoomId).emit('bridge_status_update', { bridges });
+  }
+
+  /**
+   * 一轮投票结束后，清理已完成投票的 bridge 用户的待处理礼物记录，
+   * 保留未投票的礼物（只刷礼物没来得及投票的）以供下一轮使用。
+   * @param {string} novelRoomId - 小说房间 ID
+   * @param {Object} votingState - 投票管理器当前 state（含 userVotes）
+   * @param {string} bridgeId - 指定桥接器 ID（可选，不传则清理该房间所有桥接器）
+   */
+  cleanupPendingAfterRound(novelRoomId, votingState, bridgeId = null) {
+    const votedBridgeUsers = Object.keys(votingState.userVotes || {}).filter(id =>
+      id.startsWith('live_bridge_')
+    );
+
+    let cleaned = 0;
+    const toDelete = [];
+
+    for (const key of this._pendingCoins.keys()) {
+      const pending = this._pendingCoins.get(key);
+      if (!pending) continue;
+
+      const instance = this._bridges.get(pending.bridgeId);
+      if (!instance || instance.novelRoomId !== novelRoomId) continue;
+      if (bridgeId && pending.bridgeId !== bridgeId) continue;
+
+      if (votedBridgeUsers.includes(key)) {
+        toDelete.push(key);
+        cleaned++;
+      }
+    }
+
+    for (const key of toDelete) {
+      this._pendingCoins.delete(key);
+    }
+
+    console.log(`[LiveBridge] 轮次结束，清理 ${cleaned} 条已投票用户的待处理礼物记录`);
   }
 
   /**

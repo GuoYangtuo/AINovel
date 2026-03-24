@@ -517,6 +517,16 @@ class VotingManager {
   }
 
   /**
+   * 获取所有已投票的用户ID（仅 bridge 相关）
+   * @returns {string[]} 已投票的 bridge 用户 fakeUserId 数组
+   */
+  getBridgeUserVotes() {
+    return Object.keys(this.votingState.userVotes).filter(userId =>
+      userId.startsWith('live_bridge_')
+    );
+  }
+
+  /**
    * 清理资源
    */
   cleanup() {
