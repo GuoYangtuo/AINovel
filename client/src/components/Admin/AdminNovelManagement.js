@@ -42,10 +42,12 @@ import {
   Description,
   FolderOpen,
   AutoAwesome,
-  Download
+  Download,
+  LiveTv
 } from '@mui/icons-material';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import LiveBridgeDialog from './LiveBridgeDialog';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -320,6 +322,7 @@ const AdminNovelManagement = () => {
   const [detail, setDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, room: null, deleteData: false });
+  const [bridgeDialog, setBridgeDialog] = useState({ open: false, room: null });
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -478,6 +481,11 @@ const AdminNovelManagement = () => {
                           <Delete fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="直播桥接">
+                        <IconButton size="small" onClick={() => setBridgeDialog({ open: true, room })} sx={{ color: '#ff9800' }}>
+                          <LiveTv fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -491,6 +499,14 @@ const AdminNovelManagement = () => {
       {selectedRoom && (
         <DetailPanel roomId={selectedRoom} detail={detail} onClose={handleDetailClose} />
       )}
+
+      {/* 直播桥接弹窗 */}
+      <LiveBridgeDialog
+        open={bridgeDialog.open}
+        onClose={() => setBridgeDialog({ open: false, room: null })}
+        roomId={bridgeDialog.room?.roomId}
+        roomTitle={bridgeDialog.room?.title}
+      />
 
       {/* 删除确认弹窗 */}
       <Dialog

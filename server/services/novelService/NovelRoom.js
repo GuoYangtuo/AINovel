@@ -242,10 +242,17 @@ class NovelRoom {
    * @param {string} choice - 选择的选项
    * @param {number} coinsSpent - 消费的金币数量
    * @param {string} socketId - Socket ID
+   * @param {Object} options - 附加选项
+   * @param {string} options.platform - 平台来源
    * @returns {Object} 投票结果
    */
-  async addVote(userId, username, choice, coinsSpent = 0, socketId = null) {
-    const result = await this.votingManager.addVote(userId, username, choice, coinsSpent, socketId);
+  async addVote(userId, username, choice, coinsSpent = 0, socketId = null, options = {}) {
+    const result = await this.votingManager.addVote(userId, username, choice, coinsSpent, socketId, options);
+    
+    // 投票成功后广播更新给前端
+    if (result.success && this.io) {
+      this.io.to(this.roomId).emit('novel_state', this.getNovelState());
+    }
     
     // 投票后保存数据
     if (result.success) {

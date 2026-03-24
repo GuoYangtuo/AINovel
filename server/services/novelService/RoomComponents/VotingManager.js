@@ -23,6 +23,8 @@ class VotingManager {
     
     this.votingTimer = null;
     this.io = null;
+    this.onVotingStart = null; // 投票开始钩子，由 LiveBridgeManager 注册
+    this.onVotingEnd = null;   // 投票结束钩子，由 Room 注册
   }
 
   /**
@@ -248,9 +250,11 @@ class VotingManager {
    * @param {string} choice - 选择的选项
    * @param {number} coinsSpent - 消费的金币数量
    * @param {string} socketId - Socket ID
-   * @returns {Object} 投票结果
+   * @param {Object} options - 附加选项
+   * @param {string} options.platform - 平台来源 (例如 'bilibili', 'douyin', 'web')
+   * @param {boolean} options.isBridgeVote - 是否为直播桥接投票（跳过金币扣除）
    */
-  async addVote(userId, username, choice, coinsSpent = 0, socketId = null) {
+  async addVote(userId, username, choice, coinsSpent = 0, socketId = null, options = {}) {
     if (!this.votingState.isVoting) {
       this.logger.logWarning('当前不在投票阶段');
       return { success: false, message: '当前不在投票阶段' };
@@ -267,8 +271,12 @@ class VotingManager {
       return { success: false, message: '金币数量无效' };
     }
 
-    // 如果需要消费金币，立即扣除
-    if (coinsSpent > 0) {
+    // 桥接投票：礼物票数已经是最终票数，不需要 +1 基础票
+    const isBridgeVote = options.isBridgeVote || (options.platform && options.platform !== 'web');
+    const totalVotes = isBridgeVote ? coinsSpent : (1 + coinsSpent);
+
+    // 如果需要消费金币且不是桥接投票，立即扣除（桥接投票的礼物票数已转换，不重复扣除）
+    if (coinsSpent > 0 && !isBridgeVote) {
       const deductionSuccess = await this.deductCoinsImmediately(
         userId, 
         coinsSpent, 
@@ -286,9 +294,9 @@ class VotingManager {
     if (previousVote && this.votingState.votes[previousVote.choice] !== undefined) {
       this.votingState.votes[previousVote.choice] -= previousVote.totalVotes;
     }
-
-    // 计算总投票数：默认1票 + 金币票数
-    const totalVotes = 1 + coinsSpent;
+    
+    // 获取平台来源
+    const platform = options.platform || 'web';
     
     // 记录新投票
     this.votingState.userVotes[userId] = {
@@ -296,18 +304,27 @@ class VotingManager {
       choice,
       coinsSpent,
       totalVotes,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      platform,
+      isBridgeVote
     };
     
     // 更新选项的总票数
     this.votingState.votes[choice] = (this.votingState.votes[choice] || 0) + totalVotes;
     
     // 记录投票日志
-    this.logger.logVoting(`用户 ${userId} 投票: ${choice} (已扣除${coinsSpent}金币，总计${totalVotes}票)`);
+    const voteDesc = isBridgeVote
+      ? `礼物投票，总计${totalVotes}票`
+      : (coinsSpent > 0
+        ? `已扣除${coinsSpent}金币，总计${totalVotes}票`
+        : '基础投票权（1票）');
+    this.logger.logVoting(`用户 ${userId} 投票: ${choice} (${voteDesc}) [${platform}]`);
 
-    const message = coinsSpent > 0 
-      ? `投票成功！已扣除${coinsSpent}金币，总计${totalVotes}票` 
-      : '投票成功！使用基础投票权（1票）';
+    const message = isBridgeVote
+      ? `投票成功！礼物投票，总计${totalVotes}票`
+      : (coinsSpent > 0
+        ? `投票成功！已扣除${coinsSpent}金币，总计${totalVotes}票`
+        : '投票成功！使用基础投票权（1票）');
 
     return {
       success: true,
@@ -347,6 +364,11 @@ class VotingManager {
         customOptionCosts: this.votingState.customOptionCosts,
         discussionActive: true
       });
+    }
+
+    // 调用投票开始钩子（由 LiveBridgeManager 注册）
+    if (this.onVotingStart) {
+      this.onVotingStart(this.roomId);
     }
   }
 

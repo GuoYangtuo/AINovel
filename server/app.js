@@ -19,9 +19,15 @@ const {
   getAllRoomsInfo,
   addDiscussionMessage,
   getDiscussionMessages,
-  addCustomOption
+  addCustomOption,
+  novelRoomManager
 } = require('./services/novelService');
+const LiveBridgeManager = require('./services/liveBridge/LiveBridgeManager');
 const { authenticateSocket } = require('./middleware/socketAuth');
+const { authenticateToken, requireAdmin } = require('./middleware/adminAuth');
+
+// 创建直播桥接管理器单例
+const liveBridgeManager = new LiveBridgeManager();
 
 // 获取本机内网IP地址
 function getLocalIP() {
@@ -244,8 +250,95 @@ io.on('connection', (socket) => {
   });
 });
 
+// ============================================================
+// 直播桥接管理 API (需要管理员权限)
+// 前端发 /api/admin/bridges/...，proxy 去掉 /api 后变为 /admin/bridges/...
+// ============================================================
+const liveBridgeRouter = express.Router();
+liveBridgeRouter.use(authenticateToken);
+liveBridgeRouter.use(requireAdmin);
+
+// 获取所有桥接器状态
+liveBridgeRouter.get('/', (req, res) => {
+  try {
+    res.json({ success: true, bridges: liveBridgeManager.getAllBridges() });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
+
+// 获取某个小说房间的桥接器
+liveBridgeRouter.get('/room/:roomId', (req, res) => {
+  try {
+    const bridges = liveBridgeManager.getBridgesForRoom(req.params.roomId);
+    res.json({ success: true, bridges });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
+
+// 连接直播间桥接器
+liveBridgeRouter.post('/connect', async (req, res) => {
+  try {
+    const { platform, novelRoomId, credentials, liveRoomId } = req.body;
+
+    if (!platform || !novelRoomId || !credentials) {
+      return res.status(400).json({ success: false, message: '参数不完整' });
+    }
+
+    if (!novelRoomManager.hasRoom(novelRoomId)) {
+      return res.status(404).json({ success: false, message: '小说房间不存在' });
+    }
+
+    const result = await liveBridgeManager.connectBridge({
+      platform,
+      novelRoomId,
+      credentials,
+      liveRoomId,
+    });
+
+    if (result.success) {
+      // 连接成功后等待一小段时间让 connect_success 事件触发并设置 running=true
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const bridges = liveBridgeManager.getBridgesForRoom(novelRoomId);
+      const bridge = bridges.find(b => b.bridgeId === result.bridgeId);
+      res.json({ success: true, bridgeId: result.bridgeId, bridge, bridges, message: '连接成功' });
+    } else {
+      res.status(400).json({ success: false, message: result.message });
+    }
+  } catch (error) {
+    console.error('连接直播桥接器失败:', error);
+    res.status(500).json({ success: false, message: `连接失败: ${error.message}` });
+  }
+});
+
+// 断开直播间桥接器
+liveBridgeRouter.post('/disconnect', async (req, res) => {
+  try {
+    const { bridgeId } = req.body;
+    if (!bridgeId) {
+      return res.status(400).json({ success: false, message: '缺少 bridgeId' });
+    }
+
+    const result = await liveBridgeManager.disconnectBridge(bridgeId);
+
+    if (result.success) {
+      res.json({ success: true, message: '已断开连接' });
+    } else {
+      res.status(400).json({ success: false, message: result.message });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: `断开失败: ${error.message}` });
+  }
+});
+
+app.use('/api/admin/bridges', liveBridgeRouter);
+
 // 启动小说生成器
 initializeNovel(io);
+
+// 将 io 注入到 liveBridgeManager
+liveBridgeManager.setIO(io);
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

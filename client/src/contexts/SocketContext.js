@@ -253,6 +253,41 @@ export const SocketProvider = ({ children }) => {
         });
       });
 
+      // 直播桥接相关事件
+      newSocket.on('bridge_gift', (data) => {
+        console.log('收到直播礼物:', data);
+        toast(`🎁 ${data.username} 赠送 ${data.giftName}×${data.giftNum} (+${data.votes}票，待投)`, {
+          icon: '🎁',
+          duration: 3000,
+          position: 'bottom-right'
+        });
+      });
+
+      newSocket.on('bridge_vote', (data) => {
+        console.log('收到直播桥接投票:', data);
+        // 直播桥接投票会通过 vote_update 一起更新 votes/userVotes
+        // 这里只处理通知
+        if (data.type === 'danmu') {
+          const giftInfo = data.giftVotes > 0 ? `含礼物票×${data.giftVotes}` : '';
+          toast(`🎙️ ${data.username} 发送「${data.message}」→ 投给「${data.choice}」(+${data.votes}票 ${giftInfo})`, {
+            icon: '🎙️',
+            duration: 3000,
+            position: 'bottom-right'
+          });
+        } else if (data.type === 'gift') {
+          toast(`🎁 ${data.username} 赠送${data.giftName}×${data.giftNum}投给了「${data.choice}」(+${data.votes}票)`, {
+            icon: '🎁',
+            duration: 3000,
+            position: 'bottom-right'
+          });
+        }
+      });
+
+      newSocket.on('bridge_status_update', (data) => {
+        console.log('直播桥接状态更新:', data);
+        // 可以在这里更新 UI 状态
+      });
+
       // 房间相关事件
       newSocket.on('join_room_success', (data) => {
         console.log('成功加入房间:', data);

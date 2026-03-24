@@ -69,6 +69,13 @@ const BORDER_COLORS = {
   default: '1px solid rgba(255, 255, 255, 0.1)',
 };
 
+const PLATFORM_CONFIG = {
+  bilibili: { label: 'B站', color: '#00A1D6', bgColor: 'rgba(0, 161, 214, 0.15)' },
+  douyin: { label: '抖音', color: '#000000', bgColor: 'rgba(0, 0, 0, 0.3)' },
+  kuaishou: { label: '快手', color: '#FF6C00', bgColor: 'rgba(255, 108, 0, 0.15)' },
+  web: { label: '网页', color: '#888888', bgColor: 'rgba(136, 136, 136, 0.1)' },
+};
+
 // 已投票人记录列表组件
 const VoterRecordList = ({ choices, userVotes = {} }) => {
   if (!choices || choices.length === 0 || Object.keys(userVotes).length === 0) {
@@ -98,7 +105,8 @@ const VoterRecordList = ({ choices, userVotes = {} }) => {
       votersByChoice[voteInfo.choice].push({
         userId,
         username: voteInfo.username || `用户_${userId.slice(0, 6)}`,
-        totalVotes: voteInfo.totalVotes || 1
+        totalVotes: voteInfo.totalVotes || 1,
+        platform: voteInfo.platform || 'web'
       });
     }
   });
@@ -110,7 +118,8 @@ const VoterRecordList = ({ choices, userVotes = {} }) => {
       customVoters.push({
         userId,
         username: voteInfo.username || `用户_${userId.slice(0, 6)}`,
-        totalVotes: voteInfo.totalVotes || 1
+        totalVotes: voteInfo.totalVotes || 1,
+        platform: voteInfo.platform || 'web'
       });
     }
   });
@@ -249,6 +258,24 @@ const VoterRecordList = ({ choices, userVotes = {} }) => {
                     }}
                   >
                     {voter.username}
+                    {voter.platform && voter.platform !== 'web' && (
+                      <Box
+                        component="span"
+                        sx={{
+                          ml: 0.5,
+                          px: 0.4,
+                          py: '1px',
+                          borderRadius: 0.5,
+                          fontSize: '0.6rem',
+                          color: (PLATFORM_CONFIG[voter.platform]?.color || '#888'),
+                          bgcolor: (PLATFORM_CONFIG[voter.platform]?.bgColor || 'rgba(136,136,136,0.1)'),
+                          fontWeight: 'bold',
+                          verticalAlign: 'middle'
+                        }}
+                      >
+                        {PLATFORM_CONFIG[voter.platform]?.label || voter.platform}
+                      </Box>
+                    )}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -307,7 +334,7 @@ const FloatingVotingPanel = ({
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
         <HowToVote sx={{ mr: 0.5, color: 'primary.main', fontSize: 18 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flex: 1 }}>
-          投票
+          接下来的发展？
         </Typography>
         {isVoting && formatTime && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

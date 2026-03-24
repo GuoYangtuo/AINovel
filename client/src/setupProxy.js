@@ -1,4 +1,4 @@
-﻿const proxy = require('http-proxy-middleware')
+const proxy = require('http-proxy-middleware')
 
 module.exports = function (app)  {
   app.use(
@@ -12,7 +12,7 @@ module.exports = function (app)  {
         changeOrigin 默认 false，但一般需要将 changeOrigin 值设为 true，根据自己需求调整
       */
       pathRewrite: {
-        '^/api': ''                                   // 重写请求路径
+        '^/api': ''
       }
     })
   )
